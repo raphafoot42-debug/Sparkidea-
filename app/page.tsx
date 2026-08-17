@@ -414,6 +414,74 @@ export default function HomePage() {
         </div>
       </div>
 
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          padding: "10vh 24px 14vh",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={{ fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+          Affiliation
+        </div>
+        <h2 style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 600, maxWidth: 560, lineHeight: 1.3 }}>
+          Recommande Spark Idea. Sois payé pour ça.
+        </h2>
+        <p style={{ marginTop: 10, fontSize: 14, color: "var(--muted)", maxWidth: 460, lineHeight: 1.6 }}>
+          Rejoins le programme gratuitement et touche une commission sur chaque personne que tu inscris — sans limite, sans avance de frais.
+        </p>
+
+        <div style={{ display: "flex", gap: 28, marginTop: 30, flexWrap: "wrap", justifyContent: "center", maxWidth: 640 }}>
+          {[
+            { n: 1, t: "Inscription", d: "Crée ton compte affilié en moins de deux minutes, aucune carte requise." },
+            { n: 2, t: "Partage", d: "Récupère ton lien unique et diffuse-le où tu veux." },
+            { n: 3, t: "Rémunération", d: "Chaque inscription via ton lien génère une commission versée automatiquement." },
+          ].map((step) => (
+            <div key={step.n} style={{ width: 170, textAlign: "center" }}>
+              <div
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  margin: "0 auto 10px",
+                }}
+              >
+                {step.n}
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>{step.t}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{step.d}</div>
+            </div>
+          ))}
+        </div>
+
+        <a
+          href="https://spark-idea-final-affini-x.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary"
+          style={{ marginTop: 30, textDecoration: "none", display: "inline-block" }}
+        >
+          Devenir affilié →
+        </a>
+
+        <div style={{ marginTop: 30, fontSize: 12.5, color: "var(--muted)" }}>
+          Une question sur le programme ? Écris-moi sur Telegram{" "}
+          <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text)" }}>
+            @Raphael42r
+          </a>
+        </div>
+      </div>
+
       <Link
         href="/admin/login"
         style={{
