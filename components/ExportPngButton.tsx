@@ -8,11 +8,31 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 export function ExportPngButton({ schema }: { schema: SchemaResult }) {
   function handleExport() {
     const width = 800;
-    const rowHeight = 26;
-    const criteriaCount = Object.keys(schema.criteria).length;
-    const nodesCount = schema.nodes.length;
-    const height = 200 + criteriaCount * rowHeight + nodesCount * 70 + 80;
+    const maxTextWidth = width - 80;
 
+    // --- Passe 1 : on mesure le texte réel pour connaître la hauteur exacte
+    // avant de créer le canvas final, plutôt que d'estimer au pif (une
+    // estimation trop courte coupait le bas du schéma dans le PNG).
+    const measureCanvas = document.createElement("canvas");
+    const mctx = measureCanvas.getContext("2d");
+    if (!mctx) return;
+
+    let height = 50 + 34 + 40; // titre + score
+    height += 22; // en-tête "ANALYSE"
+    for (const c of Object.values(schema.criteria)) {
+      height += 16;
+      mctx.font = "12px sans-serif";
+      height += countLines(mctx, c.note, maxTextWidth) * 15 + 14;
+    }
+    height += 20 + 22; // en-tête "PLAN D'ACTION"
+    for (const n of schema.nodes) {
+      height += 16 + 16;
+      mctx.font = "12px sans-serif";
+      height += countLines(mctx, n.comment, maxTextWidth) * 15 + 24;
+    }
+    height += 60; // marge + pied de page
+
+    // --- Passe 2 : dessin réel sur un canvas dimensionné correctement
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -49,8 +69,7 @@ export function ExportPngButton({ schema }: { schema: SchemaResult }) {
       y += 16;
       ctx.fillStyle = "#7d8590";
       ctx.font = "12px sans-serif";
-      wrapText(ctx, c.note, 40, y, width - 80, 15);
-      y += 15 * Math.ceil(c.note.length / 90) + 14;
+      y = wrapText(ctx, c.note, 40, y, maxTextWidth, 15) + 14;
     }
 
     y += 20;
@@ -73,8 +92,7 @@ export function ExportPngButton({ schema }: { schema: SchemaResult }) {
       y += 16;
       ctx.fillStyle = "#7d8590";
       ctx.font = "12px sans-serif";
-      wrapText(ctx, n.comment, 40, y, width - 80, 15);
-      y += 15 * Math.ceil(n.comment.length / 90) + 24;
+      y = wrapText(ctx, n.comment, 40, y, maxTextWidth, 15) + 24;
     }
 
     // Pied de page
@@ -99,7 +117,26 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Compte le nombre de lignes qu'un texte va occuper une fois wrappé,
+// pour dimensionner le canvas correctement avant de dessiner.
+function countLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): number {
+  const words = text.split(" ");
+  let line = "";
+  let lines = 1;
+  for (const word of words) {
+    const testLine = line + word + " ";
+    if (ctx.measureText(testLine).width > maxWidth && line !== "") {
+      lines++;
+      line = word + " ";
+    } else {
+      line = testLine;
+    }
+  }
+  return lines;
+}
+
 // Retour à la ligne manuel — l'API Canvas ne le fait pas nativement.
+// Retourne la position Y finale après la dernière ligne dessinée.
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -107,7 +144,7 @@ function wrapText(
   y: number,
   maxWidth: number,
   lineHeight: number
-) {
+): number {
   const words = text.split(" ");
   let line = "";
   let currentY = y;
@@ -122,4 +159,5 @@ function wrapText(
     }
   }
   ctx.fillText(line, x, currentY);
+  return currentY;
 }
