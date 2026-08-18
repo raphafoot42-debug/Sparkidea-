@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lexora</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="theme-color" content="#05070d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lexora">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --blue:#3468e0; --cyan:#ffb84a; --bg:#05070d; --text:#e7ebf7; --dim:#8892b0;
+    --card:linear-gradient(180deg, rgba(23,32,55,0.66), rgba(12,17,30,0.55));
+    --border:rgba(96,156,248,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{overflow-x:hidden; width:100%; max-width:100%; background:var(--bg) !important;}
+  body{
+    margin:0; min-height:100vh; font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+    background:
+      radial-gradient(1300px 900px at 50% 20%, rgba(30,38,68,0.55), transparent 65%),
+      radial-gradient(1300px 700px at 8% -5%, rgba(52,104,224,0.30), transparent 60%),
+      radial-gradient(1100px 800px at 112% 8%, rgba(255,184,74,0.26), transparent 55%),
+      var(--bg);
+    color:var(--text); letter-spacing:-0.01em;
+  }
+  a{color:inherit;}
+  .orb{position:fixed;border-radius:999px;filter:blur(110px);pointer-events:none;z-index:0;opacity:.65;animation:drift 18s ease-in-out infinite;}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-30px) scale(1.08);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  .anim{animation:fadeUp .55s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .card{background:var(--card);border:1px solid var(--border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:20px;transition:.35s ease;}
+  .card:hover{border-color:rgba(96,156,248,0.4);box-shadow:0 12px 40px -12px rgba(30,64,175,0.55);}
+  .btn-primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f;font-weight:700;border:none;cursor:pointer;box-shadow:0 8px 24px -8px rgba(52,104,224,.65);transition:.2s ease;font-size:14px;}
+  .btn-primary:hover{transform:translateY(-1px);filter:brightness(1.06);}
+  .btn-ghost{background:transparent;border:1px solid rgba(148,163,184,.2);color:#cbd5e1;cursor:pointer;font-weight:600;font-size:13px;border-radius:12px;}
+  .btn-danger{background:transparent;border:1px solid rgba(248,113,113,.35);color:#fca5a5;font-weight:600;cursor:pointer;font-size:12px;border-radius:10px;}
+  input, select{background:rgba(8,12,22,.7);border:1px solid rgba(148,163,184,.18);color:var(--text);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;width:100%;}
+  input:focus, select:focus{outline:none;border-color:#5c9cf8;box-shadow:0 0 0 3px rgba(96,156,248,.18);}
+  label.field{display:flex;flex-direction:column;gap:6px;}
+  label.field span{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{text-align:left;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:12px 16px;}
+  td{padding:14px 16px;border-top:1px solid rgba(148,163,184,.08);}
+  tr.row:hover{background:rgba(255,255,255,.02);cursor:pointer;}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;}
+  .dot{width:6px;height:6px;border-radius:999px;}
+  .badge{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, rgba(52,104,224,.25), rgba(255,184,74,.15));border:1px solid rgba(96,156,248,.3);box-shadow:0 0 18px -2px rgba(96,156,248,.55);}
+  .kpi-val{font-size:32px;font-weight:800;color:#fff;}
+  .modal-bg{position:fixed;inset:0;background:rgba(4,6,12,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;animation:fadeIn .2s ease both;}
+  .icon{width:17px;height:17px;stroke:#5c9cf8;}
+  .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .grid-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  @media(min-width:900px){.grid-kpi{grid-template-columns:repeat(4,minmax(0,1fr));}}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:rgba(96,156,248,.25);border-radius:999px;}
+  .sidebar{width:256px;flex-shrink:0;display:none;flex-direction:column;gap:8px;padding:20px;border-right:1px solid rgba(96,156,248,.1);position:relative;z-index:10;}
+  @media(min-width:768px){.sidebar{display:flex;} .topbar-mobile{display:none !important;} .content{padding-top:32px !important;}}
+  .navitem{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600;color:#cbd5e1;background:none;border:none;cursor:pointer;text-align:left;width:100%;transition:.2s ease;}
+  .navitem:hover{background:rgba(96,156,248,.08);}
+  .navitem.active{background:linear-gradient(90deg, rgba(52,104,224,.22), rgba(255,184,74,.06));border:1px solid rgba(96,156,248,.35);color:#bfe0ff;}
+  .topbar-mobile{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(5,7,13,.75);backdrop-filter:blur(18px);border-bottom:1px solid rgba(96,156,248,.12);}
+  .content{flex:1;position:relative;z-index:10;padding:16px;padding-top:76px;max-width:1120px;margin:0 auto;width:100%;}
+  .shell{display:flex;min-height:100vh;}
+  .err{color:#fca5a5;font-size:12px;font-weight:600;}
+  .ok{color:#6ee7b7;font-size:12px;font-weight:600;}
+  .muted{color:var(--dim);}
+  .mono{font-family:ui-monospace,monospace;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   Lexora — front autonome (HTML/CSS/JS) + backend Vercel/Supabase.
+   Rôles : admin (chef principal), chief (sous-chef, accès filtré à ses
+   propres sous-affiliés), member (sous-affilié).
+   ===================================================================== */
+
+const STORAGE_KEY = "ah_data";
+
+function defaultRewardTiers(){
+  return [
+    {id:"tier_10", ftd:10, amount:100},
+    {id:"tier_100", ftd:100, amount:900},
+    {id:"tier_500", ftd:500, amount:4000},
+    {id:"tier_1000", ftd:1000, amount:5000},
+  ];
+}
+function defaultMemberLinks(){ return { community:[], game:[], liens:[] }; }
+function migrateMemberLinks(db){
+  if(!db.memberLinks){ db.memberLinks = defaultMemberLinks(); return; }
+  const ml = db.memberLinks;
+  if(ml.community===undefined || ml.game===undefined){
+    const genId = ()=>"lnk_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    const community = ml.communityUrl ? [{id:genId(), label:"Communauté", url:ml.communityUrl}] : [];
+    const game = ml.gameUrl ? [{id:genId(), label:ml.gameLabel||"Lancer le jeu", url:ml.gameUrl}] : [];
+    db.memberLinks = { community, game, liens: ml.liens||[] };
+  }
+  if(db.memberLinks.liens===undefined) db.memberLinks.liens = [];
+}
+
+// URL du backend : toujours l'origine actuelle (Vercel), plus jamais une URL
+// externe fixée en dur — évite les bugs de synchro liés à un mauvais domaine.
+const SYNC_API_URL = window.location.origin;
+const SYNC_API_KEY = localStorage.getItem("lexora_sync_api_key") || "";
+const REMOTE_URL = SYNC_API_URL;
+
+function defaultDB(){
+  return {
+    affiliates: [],
+    passcode: "290942",           // Chef (toi)
+    chiefs: [                     // Sous-chefs : chacun son mot de passe, sa commission de recrutement (%), et ses propres sous-affiliés (ownerChiefId)
+      {id:"chief_antoine", name:"Antoine", passcode:"joRd@ne7", recruitPercent:10, defaultCommissionPerFtd:20},
+      {id:"chief_michel", name:"Michel", passcode:"mhl", recruitPercent:10, defaultCommissionPerFtd:20}
+    ],
+    mainTrackingLink: "",
+    syncConfig: { apiUrl: "", apiKey: "" },
+    referralPercent: 10,          // Parrainage : % du CA du filleul (remplace l'ancien bonus fixe par FTD)
+    defaultBaseLink: "",
+    defaultBaseLinkLabel: "Signup",
+    defaultCommissionPerFtd: 20,
+    allowSelfSignup: true,
+    pendingSignups: [],
+    memberLinks: defaultMemberLinks(),
+    rewardTiers: defaultRewardTiers()
+  };
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      normalizeDB(parsed);
+      return parsed;
+    }
+  }catch(e){ console.error(e); }
+  return defaultDB();
+}
+function normalizeDB(db){
+  if(db.mainTrackingLink===undefined) db.mainTrackingLink="";
+  if(!db.syncConfig) db.syncConfig={apiUrl:"",apiKey:""};
+  if(db.referralPercent===undefined) db.referralPercent = 10;
+  if(db.defaultBaseLink===undefined) db.defaultBaseLink="";
+  if(db.defaultBaseLinkLabel===undefined) db.defaultBaseLinkLabel="Signup";
+  if(db.defaultCommissionPerFtd===undefined) db.defaultCommissionPerFtd = 20;
+  if(!db.chiefs) db.chiefs = defaultDB().chiefs;
+  db.chiefs.forEach(c=>{ if(c.recruitPercent===undefined) c.recruitPercent=10; if(c.defaultCommissionPerFtd===undefined) c.defaultCommissionPerFtd=20; });
+  (db.affiliates||[]).forEach(a=>{
+    if(a.commissionPerFtd===undefined) a.commissionPerFtd = 20;
+    if(a.ownerChiefId===undefined) a.ownerChiefId = null;
+    if(a.referredBy===undefined) a.referredBy=null;
+    if(!a.messages) a.messages=[];
+    if(!a.paymentInfo) a.paymentInfo=null;
+    if(!a.email) a.email="";
+  });
+  if(db.allowSelfSignup===undefined) db.allowSelfSignup=true;
+  if(!db.pendingSignups) db.pendingSignups=[];
+  migrateMemberLinks(db);
+  if(!db.rewardTiers) db.rewardTiers=defaultRewardTiers();
+}
+function saveData(){
+  DB.localEditedAt = Date.now();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){ console.error(e); }
+  pushRemoteDB();
+}
+function pushRemoteDB(){
+  const apiKey = localStorage.getItem("lexora_sync_api_key") || (DB.syncConfig && DB.syncConfig.apiKey) || "";
+  if(!REMOTE_URL || !apiKey) return;
+  const payload = JSON.parse(JSON.stringify(DB));
+  payload.syncConfig = { apiUrl: REMOTE_URL, apiKey: "" };
+  fetch(REMOTE_URL+"/api/db", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":apiKey},
+    body: JSON.stringify(payload)
+  }).catch(()=>{});
+}
+async function fetchRemoteDB(){
+  if(!REMOTE_URL) return;
+  try{
+    if(DB.localEditedAt && (Date.now() - DB.localEditedAt < 180000)){ pushRemoteDB(); return; }
+    const apiKey = localStorage.getItem("lexora_sync_api_key") || (DB.syncConfig && DB.syncConfig.apiKey) || "";
+    const headers = {};
+    if (apiKey) headers["x-api-key"] = apiKey;
+    const res = await fetch(REMOTE_URL+"/api/db", { headers });
+    if(!res.ok) return;
+    const { db } = await res.json();
+    if(!db) return;
+    if (db.affiliates) {
+      normalizeDB(db);
+      db.syncConfig = { apiUrl: REMOTE_URL, apiKey: "" };
+      DB = db;
+    } else {
+      if (db.mainTrackingLink !== undefined) DB.mainTrackingLink = db.mainTrackingLink;
+      if (db.referralPercent !== undefined) DB.referralPercent = db.referralPercent;
+      if (db.defaultBaseLink !== undefined) DB.defaultBaseLink = db.defaultBaseLink;
+      if (db.defaultBaseLinkLabel !== undefined) DB.defaultBaseLinkLabel = db.defaultBaseLinkLabel;
+      if (db.defaultCommissionPerFtd !== undefined) DB.defaultCommissionPerFtd = db.defaultCommissionPerFtd;
+      if (db.allowSelfSignup !== undefined) DB.allowSelfSignup = db.allowSelfSignup;
+      if (db.memberLinks) DB.memberLinks = db.memberLinks;
+      if (db.rewardTiers) DB.rewardTiers = db.rewardTiers;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    render();
+  }catch(e){ /* serveur injoignable — on garde la copie locale */ }
+}
+
+/* ---------------- Notifications ---------------- */
+const NOTIF_MEMBER_KEY = "lexora_notif_member";
+const NOTIF_ADMIN_KEY = "lexora_notif_admin";
+const FTD_BASELINE_KEY = "lexora_ftd_baseline";
+function notifSupported(){ return typeof Notification !== "undefined"; }
+function notifEnabled(key){ return notifSupported() && Notification.permission==="granted" && localStorage.getItem(key)==="1"; }
+async function toggleFtdNotifications(key){
+  if(!notifSupported()){ alert("Les notifications ne sont pas prises en charge sur cet appareil/navigateur."); return; }
+  if(notifEnabled(key)){ localStorage.setItem(key,"0"); render(); return; }
+  const perm = await Notification.requestPermission();
+  if(perm==="granted"){
+    localStorage.setItem(key,"1");
+    primeFtdBaseline();
+    showFtdNotification("Notifications activées ✔", "Tu seras alerté dès qu'un nouveau dépôt arrive.");
+  } else { localStorage.setItem(key,"0"); }
+  render();
+}
+function showFtdNotification(title, body){
+  try{
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.ready.then(reg=>{
+        if(reg && reg.showNotification) reg.showNotification(title, { body, icon:"icon-192.png", badge:"icon-192.png" });
+        else if(notifSupported()) new Notification(title, { body, icon:"icon-192.png" });
+      }).catch(()=>{ if(notifSupported()) new Notification(title, { body, icon:"icon-192.png" }); });
+    } else if(notifSupported()){ new Notification(title, { body, icon:"icon-192.png" }); }
+  }catch(e){ console.error(e); }
+}
+function getFtdBaseline(){ try{ return JSON.parse(localStorage.getItem(FTD_BASELINE_KEY)||"{}"); }catch(e){ return {}; } }
+function setFtdBaseline(obj){ try{ localStorage.setItem(FTD_BASELINE_KEY, JSON.stringify(obj)); }catch(e){} }
+function primeFtdBaseline(){
+  const baseline = {};
+  (DB.affiliates||[]).forEach(a=>{ baseline[a.id] = sumStats(a.dailyStats).ftd; });
+  setFtdBaseline(baseline);
+}
+function checkFtdNotifications(){
+  if(!DB || !DB.affiliates) return;
+  const memberOn = notifEnabled(NOTIF_MEMBER_KEY) && SESSION && SESSION.role==="member";
+  const adminOn = notifEnabled(NOTIF_ADMIN_KEY) && SESSION && (SESSION.role==="admin"||SESSION.role==="chief");
+  if(!memberOn && !adminOn) return;
+  const baseline = getFtdBaseline();
+  const firstRun = Object.keys(baseline).length===0;
+  const newBaseline = {};
+  DB.affiliates.forEach(a=>{
+    const ftd = sumStats(a.dailyStats).ftd;
+    newBaseline[a.id] = ftd;
+    if(firstRun) return;
+    const prev = baseline[a.id];
+    if(prev===undefined || ftd<=prev) return;
+    const diff = ftd - prev;
+    if(adminOn && (SESSION.role==="admin" || a.ownerChiefId===SESSION.chiefId)){
+      showFtdNotification("Nouveau dépôt 🎉", `${a.name} vient de générer ${diff} dépôt${diff>1?"s":""} supplémentaire${diff>1?"s":""}.`);
+    }
+    if(memberOn && SESSION.id===a.id){
+      showFtdNotification("Nouveau dépôt 🎉", `Tu viens de générer ${diff} nouveau${diff>1?"x":""} dépôt${diff>1?"s":""} !`);
+    }
+  });
+  setFtdBaseline(newBaseline);
+}
+setInterval(()=>{ fetchRemoteDB().then(checkFtdNotifications); }, 60000);
+function notifButtonHtml(key){
+  const on = notifEnabled(key);
+  const blocked = notifSupported() && Notification.permission==="denied";
+  if(blocked) return `<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)">${icon('bell',14,'#8892b0')} Notifications bloquées</span>`;
+  return `<button class="btn-ghost" style="padding:8px 14px;font-size:13px;display:flex;align-items:center;gap:6px;${on?'color:#6ee7b7;border-color:rgba(52,211,153,.3)':''}" onclick="toggleFtdNotifications('${key}')">${icon('bell',14,on?'#6ee7b7':'#5c9cf8')} ${on?"Notifications activées":"Activer les notifications"}</button>`;
+}
+
+let DB = loadData();
+let SESSION = null; // {role:'admin'} | {role:'chief', chiefId, name} | {role:'member', id}
+let VIEW = "overview";
+let charts = {};
+const urlRefCode = new URLSearchParams(location.search).get("ref") || "";
+
+/* ---------------- utils ---------------- */
+const uid = (p="aff") => p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const todayStr = () => new Date().toISOString().slice(0,10);
+const eur = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(n)||0);
+const numf = n => new Intl.NumberFormat('fr-FR').format(Number(n)||0);
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function isoWeekStart(dateStr){ const d=new Date(dateStr+"T00:00:00"); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.toISOString().slice(0,10); }
+const monthKey = d => d.slice(0,7);
+function labelForKey(key, period){
+  if(period==="day"||period==="week"){ const d=new Date(key+"T00:00:00"); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}); }
+  const [y,m]=key.split('-'); return new Date(+y,+m-1,1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});
+}
+function sumStats(list){
+  return list.reduce((a,s)=>{a.clicks+=+s.clicks||0;a.signups+=+s.signups||0;a.ftd+=+s.ftd||0;a.deposits+=+s.deposits||0;a.revenue+=+s.revenue||0;return a;},{clicks:0,signups:0,ftd:0,deposits:0,revenue:0});
+}
+function groupStats(list, period){
+  const map=new Map();
+  for(const s of list){
+    const key = period==="day"?s.date:period==="week"?isoWeekStart(s.date):monthKey(s.date);
+    const cur = map.get(key)||{key,clicks:0,signups:0,ftd:0,deposits:0,revenue:0};
+    cur.clicks+=+s.clicks||0;cur.signups+=+s.signups||0;cur.ftd+=+s.ftd||0;cur.deposits+=+s.deposits||0;cur.revenue+=+s.revenue||0;
+    map.set(key,cur);
+  }
+  return Array.from(map.values()).sort((a,b)=>a.key.localeCompare(b.key)).map(r=>({...r,label:labelForKey(r.key,period)}));
+}
+function findAffiliate(id){ return DB.affiliates.find(a=>a.id===id); }
+function findChief(id){ return DB.chiefs.find(c=>c.id===id); }
+function visibleAffiliates(){
+  if(SESSION.role==="chief") return DB.affiliates.filter(a=>a.ownerChiefId===SESSION.chiefId);
+  return DB.affiliates.filter(a=>!a.ownerChiefId);
+}
+
+/* ---------------- parrainage (% du CA du filleul) ---------------- */
+function filleulsOf(sponsorId){ return DB.affiliates.filter(a=>a.referredBy===sponsorId); }
+function referralEarningsFor(filleul){ return sumStats(filleul.dailyStats).revenue * ((DB.referralPercent||0)/100); }
+function totalReferralEarnings(sponsorId){ return filleulsOf(sponsorId).reduce((acc,f)=>acc+referralEarningsFor(f),0); }
+function referralHistoryFor(sponsorId){
+  const rows=[];
+  filleulsOf(sponsorId).forEach(f=>{
+    f.dailyStats.forEach(s=>{
+      if(+s.revenue>0) rows.push({date:s.date, filleulName:f.name, revenue:+s.revenue, amount:+s.revenue*((DB.referralPercent||0)/100)});
+    });
+  });
+  return rows.sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+/* ---------------- messagerie interne ---------------- */
+function unreadForAdmin(a){ return (a.messages||[]).filter(m=>m.from==="member" && !m.readByAdmin).length; }
+function unreadForMember(a){ return (a.messages||[]).filter(m=>m.from==="admin" && !m.readByMember).length; }
+function totalUnreadForAdmin(){ return visibleAffiliates().reduce((n,a)=>n+unreadForAdmin(a),0); }
+function sendMessage(affiliateId, from, text){
+  const a = findAffiliate(affiliateId);
+  if(!a || !text.trim()) return;
+  if(!a.messages) a.messages=[];
+  a.messages.push({ id: uid("msg"), from, text: text.trim(), at: new Date().toISOString(), readByAdmin: from==="admin", readByMember: from==="member" });
+  saveData();
+}
+function markReadByAdmin(a){ if(!unreadForAdmin(a)) return; (a.messages||[]).forEach(m=>{ if(m.from==="member") m.readByAdmin=true; }); saveData(); }
+function markReadByMember(a){ if(!unreadForMember(a)) return; (a.messages||[]).forEach(m=>{ if(m.from==="admin") m.readByMember=true; }); saveData(); }
+function fmtMsgTime(iso){ const d=new Date(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+" · "+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function messageThreadHtml(a, forRole){
+  const msgs = a.messages||[];
+  return `<div style="display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;padding:4px 2px 4px 0" id="msgThreadScroll">
+    ${msgs.length ? msgs.map(m=>{
+      const mine = (forRole!=="member" && m.from==="admin") || (forRole==="member" && m.from==="member");
+      return `<div style="display:flex;justify-content:${mine?'flex-end':'flex-start'}">
+        <div style="max-width:78%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;${mine
+          ? 'background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f;border-bottom-right-radius:4px'
+          : 'background:rgba(148,163,184,.1);color:var(--text);border:1px solid rgba(148,163,184,.14);border-bottom-left-radius:4px'}">
+          <div>${esc(m.text)}</div><div style="font-size:10px;margin-top:4px;opacity:.65">${fmtMsgTime(m.at)}</div>
+        </div></div>`;
+    }).join("") : `<p class="muted" style="text-align:center;padding:24px 0">Aucun message pour le moment.</p>`}
+  </div>`;
+}
+
+const ICONS = {
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  userCheck:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>',
+  dollar:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  wallet:'<path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  userplus:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/>',
+  trend:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  layout:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  pencil:'<path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  power:'<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>',
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  arrowleft:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  menu:'<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
+  gift:'<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  send:'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  crown:'<path d="M2 20h20"/><path d="M4 20l1.5-11L9 13l3-7 3 7 3.5-4L20 20"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+};
+function icon(name, size=17, color="#5c9cf8"){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
+}
+
+/* ---------------- shared UI pieces ---------------- */
+function statCard(iconName,label,value,delay=0){
+  return `<div class="card anim" style="padding:22px;display:flex;flex-direction:column;gap:10px;animation-delay:${delay}ms">
+    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)">${esc(label)}</span>
+    <div class="kpi-val">${value}</div>
+  </div>`;
+}
+function statusPill(status){
+  const active = status==="active";
+  const c = active?"#6ee7b7":"#fca5a5"; const bg = active?"rgba(52,211,153,.1)":"rgba(248,113,113,.1)"; const bd= active?"rgba(52,211,153,.3)":"rgba(248,113,113,.3)";
+  return `<span class="pill" style="color:${c};background:${bg};border:1px solid ${bd}"><span class="dot" style="background:${active?"#34d399":"#f87171"};box-shadow:0 0 10px ${active?"#34d399":"#f87171"}"></span>${active?"Actif":"Suspendu"}</span>`;
+}
+function periodToggle(current, onChangeFn){
+  const opts=[["day","Jour"],["week","Semaine"],["month","Mois"]];
+  return `<div style="display:flex;gap:4px;background:rgba(8,12,22,.7);border:1px solid rgba(148,163,184,.18);border-radius:999px;padding:4px">
+    ${opts.map(([k,l])=>`<button onclick="${onChangeFn}('${k}')" style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;border:none;cursor:pointer;${current===k?`background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f`:`background:none;color:var(--dim)`}">${l}</button>`).join("")}
+  </div>`;
+}
+function renderAreaChart(canvasId, data, key="revenue", formatter=eur){
+  requestAnimationFrame(()=>{
+    const el = document.getElementById(canvasId);
+    if(!el) return;
+    if(charts[canvasId]) charts[canvasId].destroy();
+    const grad = el.getContext('2d').createLinearGradient(0,0,0,260);
+    grad.addColorStop(0,'rgba(255,184,74,0.55)'); grad.addColorStop(1,'rgba(52,104,224,0)');
+    charts[canvasId] = new Chart(el, {
+      type:'line',
+      data:{ labels:data.map(d=>d.label), datasets:[{ data:data.map(d=>d[key]), borderColor:'#ffb84a', borderWidth:2.5, backgroundColor:grad, fill:true, tension:0.4, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:'#ffb84a' }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'rgba(9,13,24,.92)', borderColor:'rgba(96,156,248,.3)', borderWidth:1, titleColor:'#5c9cf8', bodyColor:'#e7ebf7', padding:10, callbacks:{ label:(ctx)=>formatter(ctx.parsed.y) } } },
+        scales:{ x:{ grid:{ color:'rgba(148,163,184,.12)', drawTicks:false }, ticks:{ color:'#7d879c', font:{size:11} } },
+                 y:{ grid:{ color:'rgba(148,163,184,.12)', drawTicks:false }, ticks:{ color:'#7d879c', font:{size:11} } } } }
+    });
+  });
+}
+
+/* ---------------- LOGIN ---------------- */
+let loginTab = urlRefCode ? "register" : "member";
+let signupSuccess = "";
+function renderLogin(err=""){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative">
+      <div class="orb" style="width:480px;height:480px;top:-160px;left:-160px;background:#3468e0"></div>
+      <div class="orb" style="width:420px;height:420px;bottom:-140px;right:-120px;background:#ffb84a;animation-delay:3s"></div>
+      <div style="position:relative;z-index:10;width:100%;max-width:420px">
+        <div class="anim" style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:32px">
+          <span style="font-size:20px;font-weight:800">Lexora</span>
+        </div>
+        <div class="card anim" style="padding:8px;animation-delay:80ms">
+          <div style="display:flex;gap:4px;padding:4px">
+            <button onclick="setLoginTab('member')" class="navitem" style="flex:1;justify-content:center;font-size:13px;${loginTab==='member'?'background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f':''}">Espace membre</button>
+            ${DB.allowSelfSignup?`<button onclick="setLoginTab('register')" class="navitem" style="flex:1;justify-content:center;font-size:13px;${loginTab==='register'?'background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f':''}">S'inscrire</button>`:""}
+            <button onclick="setLoginTab('admin')" class="navitem" style="flex:1;justify-content:center;font-size:13px;${loginTab==='admin'?'background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04101f':''}">Admin</button>
+          </div>
+          <div style="padding:24px 20px 20px">
+            ${loginTab==='member' ? `
+              <form onsubmit="return submitMemberLogin(event)" style="display:flex;flex-direction:column;gap:16px">
+                <label class="field"><span>Nom</span><input id="loginName" placeholder="Votre nom" autocomplete="off"/></label>
+                <label class="field"><span>Code d'accès</span><input id="loginCode" type="password" placeholder="Votre code" autocomplete="off"/></label>
+                ${err?`<p class="err">${esc(err)}</p>`:""}
+                <button class="btn-primary" style="border-radius:12px;padding:13px;margin-top:4px">Se connecter</button>
+              </form>` : loginTab==='register' ? `
+              <form onsubmit="return submitSelfSignup(event)" style="display:flex;flex-direction:column;gap:16px">
+                <label class="field"><span>Ton nom</span><input id="regName" placeholder="Ex : Hugo" autocomplete="off"/></label>
+                <label class="field"><span>Choisis ton code d'accès</span><input id="regCode" placeholder="Ex : hugo92" autocomplete="off"/></label>
+                <label class="field"><span>Code de parrainage (optionnel)</span><input id="regRef" value="${esc(urlRefCode)}" placeholder="Code de la personne qui t'a invité"/></label>
+                <p class="muted" style="font-size:12px;margin:-6px 0 0">Ta demande sera envoyée à l'administrateur pour validation.</p>
+                ${err?`<p class="err">${esc(err)}</p>`:""}
+                ${signupSuccess?`<p class="ok">${esc(signupSuccess)}</p>`:""}
+                <button class="btn-primary" style="border-radius:12px;padding:13px;margin-top:4px">Envoyer ma demande</button>
+              </form>` : `
+              <form onsubmit="return submitAdminLogin(event)" style="display:flex;flex-direction:column;gap:16px">
+                <label class="field"><span>Mot de passe</span><input id="adminCode" type="password" placeholder="••••••••" autocomplete="off"/></label>
+                <p class="muted" style="font-size:11.5px;margin:-8px 0 0;line-height:1.5">Un seul champ pour toi et tes sous-chefs — chacun a son propre mot de passe et arrive directement sur son espace.</p>
+                ${err?`<p class="err">${esc(err)}</p>`:""}
+                <button class="btn-primary" style="border-radius:12px;padding:13px;margin-top:4px">Se connecter</button>
+              </form>`}
+          </div>
+        </div>
+        <p style="text-align:center;font-size:12px;color:#48506b;margin-top:20px">Données synchronisées automatiquement entre appareils.</p>
+      </div>
+    </div>`;
+}
+function setLoginTab(t){ loginTab=t; signupSuccess=""; renderLogin(); }
+async function submitSelfSignup(e){
+  e.preventDefault();
+  const name = document.getElementById("regName").value.trim();
+  const code = document.getElementById("regCode").value.trim();
+  const refInput = document.getElementById("regRef").value.trim();
+  if(!name || !code) return renderLogin("Nom et code d'accès sont obligatoires."), false;
+  const taken = DB.affiliates.some(a=>a.code.toLowerCase()===code.toLowerCase()) || (DB.pendingSignups||[]).some(p=>p.code.toLowerCase()===code.toLowerCase());
+  if(taken) return renderLogin("Ce code d'accès est déjà pris, choisis-en un autre."), false;
+  if(REMOTE_URL){
+    try{
+      const res = await fetch(REMOTE_URL+"/api/signup", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, code, ref: refInput}) });
+      const data = await res.json();
+      if(!res.ok){ return renderLogin(data.error||"Inscription impossible pour le moment."), false; }
+      DB.pendingSignups = DB.pendingSignups||[];
+      DB.pendingSignups.unshift(data.request);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      signupSuccess = "Ta demande a été envoyée ✔ L'administrateur doit la valider.";
+      loginTab = "member"; renderLogin();
+      return false;
+    }catch(err){ return renderLogin("Le serveur est momentanément injoignable. Réessaie dans un instant."), false; }
+  }
+  DB.pendingSignups = DB.pendingSignups||[];
+  DB.pendingSignups.unshift({id:uid(), name, code, ref:refInput, requestedAt:new Date().toISOString()});
+  saveData();
+  signupSuccess = "Ta demande a été envoyée ✔";
+  loginTab = "member"; renderLogin();
+  return false;
+}
+function approveSignup(reqId){
+  const req = (DB.pendingSignups||[]).find(p=>p.id===reqId);
+  if(!req) return;
+  if(!DB.defaultBaseLink){ alert("Renseigne d'abord un lien de base dans Réglages avant de valider."); return; }
+  let referredBy = null;
+  if(req.ref){ const sponsor = DB.affiliates.find(a=>a.code.toLowerCase()===req.ref.toLowerCase()); if(sponsor) referredBy = sponsor.id; }
+  const ownerChiefId = SESSION.role==="chief" ? SESSION.chiefId : null;
+  const comm = SESSION.role==="chief" ? (findChief(SESSION.chiefId).defaultCommissionPerFtd||20) : (DB.defaultCommissionPerFtd||20);
+  DB.affiliates.unshift({
+    id: uid(), name: req.name, code: req.code,
+    baseLinks: [{label: DB.defaultBaseLinkLabel||"Signup", url: DB.defaultBaseLink}],
+    commissionPerFtd: comm, ownerChiefId,
+    referredBy, status:"active", createdAt: todayStr(), dailyStats: [], messages: [], paymentInfo:null, email:""
+  });
+  DB.pendingSignups = DB.pendingSignups.filter(p=>p.id!==reqId);
+  saveData(); render();
+}
+function rejectSignup(reqId){
+  if(!confirm("Refuser cette demande d'inscription ?")) return;
+  DB.pendingSignups = (DB.pendingSignups||[]).filter(p=>p.id!==reqId);
+  saveData(); render();
+}
+function submitMemberLogin(e){
+  e.preventDefault();
+  const name = document.getElementById("loginName").value.trim();
+  const code = document.getElementById("loginCode").value.trim();
+  const match = DB.affiliates.find(a=>a.name.trim().toLowerCase()===name.toLowerCase() && a.code===code);
+  if(!match) return renderLogin("Nom ou code incorrect."), false;
+  if(match.status!=="active") return renderLogin("Ce compte est actuellement suspendu."), false;
+  SESSION = {role:"member", id:match.id}; VIEW="overview"; render();
+  return false;
+}
+// Connexion admin unifiée : un seul champ, le mot de passe détermine le rôle.
+function submitAdminLogin(e){
+  e.preventDefault();
+  const code = document.getElementById("adminCode").value.trim();
+  if(code===DB.passcode){ SESSION={role:"admin"}; VIEW="overview"; render(); return false; }
+  const chief = DB.chiefs.find(c=>c.passcode===code);
+  if(chief){ SESSION={role:"chief", chiefId:chief.id, name:chief.name}; VIEW="overview"; render(); return false; }
+  renderLogin("Mot de passe incorrect.");
+  return false;
+}
+function logout(){ SESSION=null; render(); }
+
+/* ---------------- shell (sidebar + topbar) ---------------- */
+let mobileMenuOpen = false;
+function navItemHtml(n, extraOnclick=""){
+  return `<button class="navitem ${VIEW===n.key?'active':''}" onclick="${extraOnclick}setView('${n.key}')">${icon(n.icon)}${esc(n.label)}${n.badge?`<span class="mono" style="margin-left:auto;background:#eab308;color:#04101f;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:800">${n.badge}</span>`:""}</button>`;
+}
+function shell(navItems, activeName, roleLabel, contentHtml){
+  return `
+  <div class="shell">
+    <div class="orb" style="width:500px;height:500px;top:-200px;left:20%;background:#3468e0"></div>
+    <div class="orb" style="width:420px;height:420px;bottom:-160px;right:-100px;background:#ffb84a;animation-delay:4s"></div>
+    <aside class="sidebar">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 8px;margin-bottom:16px">
+        <span style="font-weight:800">Lexora</span>
+      </div>
+      ${navItems.map(n=>navItemHtml(n)).join("")}
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+        <div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:rgba(96,156,248,.15);color:#5c9cf8">${esc((activeName||"?")[0].toUpperCase())}</div>
+          <div style="min-width:0">
+            <p style="font-size:11px;color:var(--dim);margin:0 0 2px">${roleLabel}</p>
+            <p style="font-size:14px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(activeName)}</p>
+          </div>
+        </div>
+        <button class="navitem" onclick="logout()">${icon('logout',16)} Déconnexion</button>
+      </div>
+    </aside>
+    <div class="topbar-mobile">
+      <span style="font-weight:700;font-size:14px">Lexora</span>
+      <button onclick="toggleMobileMenu()" style="background:rgba(96,156,248,.1);border:none;border-radius:10px;padding:8px;cursor:pointer">${icon('menu',18,'#e7ebf7')}</button>
+    </div>
+    ${mobileMenuOpen?`
+    <div onclick="toggleMobileMenu()" style="position:fixed;inset:0;z-index:20;background:rgba(5,7,13,.96);animation:fadeIn .2s ease both">
+      <div style="padding-top:80px;padding-left:20px;padding-right:20px;display:flex;flex-direction:column;gap:8px" onclick="event.stopPropagation()">
+        ${navItems.map(n=>navItemHtml(n, "toggleMobileMenu();")).join("")}
+        <button class="navitem" style="margin-top:16px" onclick="toggleMobileMenu();logout()">${icon('logout',16)} Déconnexion</button>
+      </div>
+    </div>`:""}
+    <main class="content">${contentHtml}</main>
+  </div>`;
+}
+function toggleMobileMenu(){ mobileMenuOpen=!mobileMenuOpen; render(); }
+function setView(v){ VIEW=v; render(); }
+
+/* ---------------- ADMIN/CHIEF : overview ---------------- */
+let adminPeriod = "day";
+function adminOverviewHtml(){
+  const affs = visibleAffiliates();
+  const all = affs.flatMap(a=>a.dailyStats);
+  const t = sumStats(all);
+  const commissionsDue = affs.reduce((acc,a)=>acc+sumStats(a.dailyStats).ftd*(a.commissionPerFtd||0),0);
+  const activeCount = affs.filter(a=>a.status==="active").length;
+  const chartData = groupStats(all, adminPeriod);
+  return `
+    <div class="anim" style="margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <h1 style="font-size:28px;font-weight:800;margin:0">Vue d'ensemble</h1>
+        <p class="muted" style="margin:6px 0 0;font-size:14px">${SESSION.role==="chief"?`Performance de ton équipe`:`Performance de ton réseau`}</p>
+      </div>
+      ${notifButtonHtml(NOTIF_ADMIN_KEY)}
+    </div>
+    <div class="grid-kpi" style="margin-bottom:20px">
+      ${statCard('users','Sous-affiliés', affs.length, 0)}
+      ${statCard('userCheck','Actifs', activeCount, 60)}
+      ${statCard('dollar','Revenus générés', eur(t.revenue), 120)}
+      ${statCard('wallet','Commissions à payer', eur(commissionsDue), 180)}
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:20px;animation-delay:220ms">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
+        <div><h2 style="font-size:17px;font-weight:700;margin:0">Revenus dans le temps</h2></div>
+        ${periodToggle(adminPeriod,'setAdminPeriod')}
+      </div>
+      ${chartData.length? `<div style="height:260px"><canvas id="adminChart"></canvas></div>` : `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px">Aucune donnée pour le moment.</div>`}
+    </div>
+    <div class="grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:300ms">${icon('userplus',18)}<div><p class="muted" style="font-size:12px;margin:0">Inscriptions</p><p style="font-weight:700;margin:2px 0 0">${numf(t.signups)}</p></div></div>
+      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:340ms">${icon('trend',18)}<div><p class="muted" style="font-size:12px;margin:0">Dépôts (FTD)</p><p style="font-weight:700;margin:2px 0 0">${numf(t.ftd)}</p></div></div>
+    </div>
+  `;
+}
+function setAdminPeriod(p){ adminPeriod=p; render(); }
+
+/* ---------------- ADMIN/CHIEF : sous-affiliés ---------------- */
+let affQuery=""; let detailId=null; let modalState=null; let copiedId=null;
+function adminAffiliatesHtml(){
+  if(detailId) return affiliateDetailHtml(detailId);
+  const pending = SESSION.role==="admin" ? (DB.pendingSignups||[]) : [];
+  const affs = visibleAffiliates();
+  const filtered = affs.filter(a=>a.name.toLowerCase().includes(affQuery.toLowerCase())||a.code.toLowerCase().includes(affQuery.toLowerCase()));
+  return `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px" class="anim">
+      <div><h1 style="font-size:28px;font-weight:800;margin:0">Sous-affiliés</h1><p class="muted" style="margin:6px 0 0;font-size:14px">${affs.length} au total${SESSION.role==="chief"?" — uniquement les tiens":""}</p></div>
+      <button class="btn-primary" style="border-radius:12px;padding:11px 18px;display:flex;align-items:center;gap:8px" onclick="openAffModal('create')">${icon('plus',16,'#04101f')} Nouveau sous-affilié</button>
+    </div>
+    ${pending.length ? `
+    <div class="card anim" style="padding:20px;margin-bottom:20px;border-color:rgba(234,179,8,.4)">
+      <h2 style="font-size:15px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px">${icon('bell',16,'#eab308')} Demandes d'inscription <span class="mono" style="background:rgba(234,179,8,.15);color:#eab308;padding:2px 8px;border-radius:8px;font-size:12px">${pending.length}</span></h2>
+      <div style="overflow-x:auto;margin-top:12px">
+      <table style="min-width:480px">
+        <thead><tr><th>Nom</th><th>Code demandé</th><th>Parrain</th><th>Demandé le</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+          ${pending.map(p=>`<tr>
+            <td style="font-weight:700">${esc(p.name)}</td>
+            <td><span class="mono" style="background:rgba(148,163,184,.08);padding:4px 8px;border-radius:8px;font-size:12px">${esc(p.code)}</span></td>
+            <td class="muted">${esc(p.ref||"—")}</td>
+            <td class="muted">${new Date(p.requestedAt).toLocaleString('fr-FR')}</td>
+            <td style="text-align:right;white-space:nowrap">
+              <button class="btn-primary" style="padding:6px 14px;font-size:12px;border-radius:8px" onclick="approveSignup('${p.id}')">Accepter</button>
+              <button class="btn-ghost" style="padding:6px 14px;font-size:12px" onclick="rejectSignup('${p.id}')">Refuser</button>
+            </td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+      </div>
+    </div>` : ""}
+    <div class="anim" style="position:relative;max-width:320px;margin-bottom:16px">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%)">${icon('search',16,'#8892b0')}</span>
+      <input style="padding-left:40px" placeholder="Rechercher par nom ou code…" value="${esc(affQuery)}" oninput="affQuery=this.value;render()"/>
+    </div>
+    <div class="card anim" style="overflow:hidden">
+      <div style="overflow-x:auto">
+      <table style="min-width:720px">
+        <thead><tr style="background:rgba(148,163,184,.04)"><th>Nom</th><th>Code</th><th>Commission</th><th>Revenu</th><th>Statut</th><th>Créé le</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+          ${filtered.map(a=>{
+            const rev = sumStats(a.dailyStats).revenue;
+            return `<tr class="row" onclick="openDetail('${a.id}')">
+              <td style="font-weight:700">${esc(a.name)}</td>
+              <td><span class="mono" style="background:rgba(148,163,184,.08);padding:4px 8px;border-radius:8px;font-size:12px;cursor:pointer" onclick="event.stopPropagation();copyCode('${a.id}','${esc(a.code)}')">${esc(a.code)} ${copiedId===a.id?'✓':''}</span></td>
+              <td>${eur(a.commissionPerFtd||0)}/dépôt</td>
+              <td style="color:#5c9cf8;font-weight:700">${eur(rev)}</td>
+              <td>${statusPill(a.status)}</td>
+              <td class="muted">${new Date(a.createdAt+"T00:00:00").toLocaleDateString('fr-FR')}</td>
+              <td onclick="event.stopPropagation()" style="text-align:right;white-space:nowrap">
+                <button title="Suspendre/réactiver" onclick="toggleStatus('${a.id}')" style="background:none;border:none;cursor:pointer;padding:6px;color:#8892b0">${icon('power',15,'currentColor')}</button>
+                <button title="Modifier" onclick="openAffModal('edit','${a.id}')" style="background:none;border:none;cursor:pointer;padding:6px;color:#8892b0">${icon('pencil',15,'currentColor')}</button>
+                <button title="Supprimer" onclick="deleteAffiliate('${a.id}')" style="background:none;border:none;cursor:pointer;padding:6px;color:#8892b0">${icon('trash',15,'currentColor')}</button>
+              </td>
+            </tr>`;
+          }).join("") || `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--dim)">Aucun sous-affilié ne correspond.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    ${modalState ? affModalHtml() : ""}
+  `;
+}
+function copyCode(id, code){ navigator.clipboard?.writeText(code).catch(()=>{}); copiedId=id; render(); setTimeout(()=>{ copiedId=null; render(); }, 1200); }
+function openDetail(id){ detailId=id; render(); }
+function toggleStatus(id){ const a=findAffiliate(id); a.status = a.status==="active"?"suspended":"active"; saveData(); render(); }
+function deleteAffiliate(id){ if(!confirm("Supprimer définitivement ce sous-affilié ?")) return; DB.affiliates = DB.affiliates.filter(a=>a.id!==id); saveData(); render(); }
+let modalLinkRows = [{label:"Signup",url:""}];
+function openAffModal(mode, id){
+  modalState = {mode, id: id||null};
+  const editing = mode==="edit" ? findAffiliate(id) : null;
+  if(editing && editing.baseLinks && editing.baseLinks.length){ modalLinkRows = editing.baseLinks.map(r=>({...r})); }
+  else { modalLinkRows = [{label: DB.defaultBaseLinkLabel||"Signup", url:""}]; }
+  render();
+}
+function closeAffModal(){ modalState=null; render(); }
+function affModalHtml(){
+  const editing = modalState.mode==="edit" ? findAffiliate(modalState.id) : null;
+  const defComm = SESSION.role==="chief" ? (findChief(SESSION.chiefId).defaultCommissionPerFtd||20) : (DB.defaultCommissionPerFtd||20);
+  return `<div class="modal-bg" onclick="closeAffModal()">
+    <form onclick="event.stopPropagation()" onsubmit="return saveAffForm(event)" class="card" style="width:100%;max-width:480px;padding:26px;position:relative;background:linear-gradient(180deg, rgba(23,32,55,.95), rgba(10,14,26,.95))">
+      <button type="button" onclick="closeAffModal()" style="position:absolute;right:20px;top:20px;background:none;border:none;cursor:pointer;color:#8892b0">${icon('x',18,'currentColor')}</button>
+      <h2 style="font-size:17px;font-weight:700;margin:0 0 18px">${editing?"Modifier le sous-affilié":"Nouveau sous-affilié"}</h2>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label class="field"><span>Nom</span><input id="fName" value="${editing?esc(editing.name):''}" placeholder="Ex : Jordan M."/></label>
+        <label class="field"><span>Code d'accès</span><div style="display:flex;gap:8px"><input id="fCode" value="${editing?esc(editing.code):''}" placeholder="Ex : X7K2M9" style="flex:1"/><button type="button" class="btn-ghost" style="padding:0 14px;white-space:nowrap" onclick="document.getElementById('fCode').value=genRandomCode()">Générer</button></div></label>
+        <div>
+          <span style="font-size:13px;color:var(--dim);display:block;margin-bottom:8px">Liens de base (sans paramètre)</span>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${modalLinkRows.map((r,i)=>`
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="linkLabel${i}" value="${esc(r.label)}" placeholder="Ex : Signup" style="width:110px;flex-shrink:0" oninput="modalLinkRows[${i}].label=this.value"/>
+                <input id="linkUrl${i}" value="${esc(r.url)}" placeholder="https://lolly-bet888.com?faff=958" style="flex:1" oninput="modalLinkRows[${i}].url=this.value"/>
+                <button type="button" class="btn-ghost" style="padding:0 12px;flex-shrink:0;color:#f87171" onclick="removeLinkRow(${i})">${icon('x',15)}</button>
+              </div>`).join("")}
+          </div>
+          <button type="button" class="btn-ghost" style="margin-top:10px;padding:8px 14px;font-size:13px" onclick="addLinkRow()">+ Ajouter un lien</button>
+        </div>
+        <label class="field"><span>Commission par dépôt (€)</span><input id="fComm" type="number" min="0" step="0.5" value="${editing?editing.commissionPerFtd:defComm}"/></label>
+      </div>
+      <p id="affFormErr" class="err" style="margin-top:10px"></p>
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button type="button" class="btn-ghost" style="flex:1;padding:11px" onclick="closeAffModal()">Annuler</button>
+        <button class="btn-primary" style="flex:1;border-radius:12px;padding:11px">Enregistrer</button>
+      </div>
+    </form>
+  </div>`;
+}
+function addLinkRow(){ modalLinkRows.push({label:"",url:""}); render(); }
+function removeLinkRow(i){ modalLinkRows.splice(i,1); if(modalLinkRows.length===0) modalLinkRows.push({label:"",url:""}); render(); }
+function saveAffForm(e){
+  e.preventDefault();
+  const name=document.getElementById("fName").value.trim();
+  const code=document.getElementById("fCode").value.trim();
+  const links=modalLinkRows.filter(r=>r.url && r.url.trim()).map(r=>({label:(r.label||"").trim()||"Lien",url:r.url.trim()}));
+  const comm=Number(document.getElementById("fComm").value)||0;
+  if(!name||!code||links.length===0){ document.getElementById("affFormErr").textContent="Nom, code et au moins un lien sont obligatoires."; return false; }
+  if(modalState.mode==="edit"){
+    const a=findAffiliate(modalState.id); Object.assign(a,{name,code,baseLinks:links,commissionPerFtd:comm});
+  } else {
+    const ownerChiefId = SESSION.role==="chief" ? SESSION.chiefId : null;
+    DB.affiliates.unshift({id:uid(),name,code,baseLinks:links,commissionPerFtd:comm,ownerChiefId,referredBy:null,status:"active",createdAt:todayStr(),dailyStats:[],messages:[],paymentInfo:null,email:""});
+  }
+  saveData(); modalState=null; render();
+  return false;
+}
+
+/* ---------------- ADMIN/CHIEF : fiche détaillée + ajout d'entrée ---------------- */
+let detailPeriod="day"; let statModalOpen=false; let editStatId=null;
+function affiliateDetailHtml(id){
+  const a = findAffiliate(id);
+  if(!a){ detailId=null; return adminAffiliatesHtml(); }
+  const t = sumStats(a.dailyStats);
+  const commission = t.ftd*(a.commissionPerFtd||0);
+  const chartData = groupStats(a.dailyStats, detailPeriod);
+  const sorted = [...a.dailyStats].sort((x,y)=>y.date.localeCompare(x.date));
+  return `
+    <button onclick="detailId=null;render()" class="anim" style="display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;margin-bottom:16px">${icon('arrowleft',15)} Retour à la liste</button>
+    <div class="anim" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px">
+      <div><h1 style="font-size:26px;font-weight:800;margin:0">${esc(a.name)}</h1><p class="muted" style="margin:6px 0 0;font-size:13px">Code : ${esc(a.code)} · Commission ${eur(a.commissionPerFtd||0)}/dépôt</p></div>
+      <button class="btn-primary" style="border-radius:12px;padding:11px 18px;display:flex;align-items:center;gap:8px" onclick="editStatId=null;statModalOpen=true;render()">${icon('plus',16,'#04101f')} Ajouter une entrée</button>
+    </div>
+    <div class="grid-kpi" style="margin-bottom:20px">
+      ${statCard('userplus','Inscriptions', numf(t.signups),0)}
+      ${statCard('trend','Dépôts (FTD)', numf(t.ftd),60)}
+      ${statCard('dollar','Commission générée', eur(commission),120)}
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:20px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
+        <h2 style="font-size:17px;font-weight:700;margin:0">Évolution</h2>
+        ${periodToggle(detailPeriod,'setDetailPeriod')}
+      </div>
+      ${chartData.length? `<div style="height:260px"><canvas id="detailChart"></canvas></div>` : `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px">Aucune donnée pour le moment.</div>`}
+    </div>
+    <div class="card anim" style="padding:22px">
+      <h2 style="font-size:17px;font-weight:700;margin:0 0 16px">Historique des entrées</h2>
+      <div style="overflow-x:auto">
+      <table style="min-width:560px">
+        <thead><tr><th>Date</th><th>Inscriptions</th><th>Dépôts</th><th>CA</th><th></th></tr></thead>
+        <tbody>
+          ${sorted.map(s=>`<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString('fr-FR')}</td><td>${numf(s.signups)}</td><td>${numf(s.ftd)}</td><td style="color:#5c9cf8;font-weight:700">${eur(s.revenue)}</td><td style="text-align:right;white-space:nowrap"><button onclick="editStat('${a.id}','${s.id}')" style="background:none;border:none;cursor:pointer;color:#8892b0;margin-right:6px">${icon('pencil',14,'currentColor')}</button><button onclick="deleteStat('${a.id}','${s.id}')" style="background:none;border:none;cursor:pointer;color:#8892b0">${icon('trash',14,'currentColor')}</button></td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--dim)">Aucune entrée pour l'instant.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    ${statModalOpen ? statModalHtml(a.id, editStatId) : ""}
+  `;
+}
+function setDetailPeriod(p){ detailPeriod=p; render(); }
+function deleteStat(affId, statId){ const a=findAffiliate(affId); a.dailyStats=a.dailyStats.filter(s=>s.id!==statId); saveData(); render(); }
+function editStat(affId, statId){ editStatId = statId; statModalOpen = true; render(); }
+function statModalHtml(affId, statId){
+  const a = findAffiliate(affId);
+  const editing = statId ? a.dailyStats.find(s=>s.id===statId) : null;
+  return `<div class="modal-bg" onclick="statModalOpen=false;editStatId=null;render()">
+    <form onclick="event.stopPropagation()" onsubmit="return submitStatForm(event,'${affId}')" class="card" style="width:100%;max-width:480px;padding:26px;position:relative;background:linear-gradient(180deg, rgba(23,32,55,.95), rgba(10,14,26,.95))">
+      <button type="button" onclick="statModalOpen=false;editStatId=null;render()" style="position:absolute;right:20px;top:20px;background:none;border:none;cursor:pointer;color:#8892b0">${icon('x',18,'currentColor')}</button>
+      <h2 style="font-size:17px;font-weight:700;margin:0 0 4px">${editing?"Modifier l'entrée":"Ajouter une entrée"}</h2>
+      <p class="muted" style="font-size:12px;margin:0 0 16px">Pour ${esc(a.name)} — le total et la commission se recalculent automatiquement, tu ne peux pas les modifier directement.</p>
+      <div class="grid-2">
+        <label class="field"><span>Date</span><input id="sDate" type="date" value="${editing?editing.date:todayStr()}"/></label>
+        <label class="field"><span>Inscriptions</span><input id="sSignups" type="number" min="0" value="${editing?editing.signups:0}"/></label>
+        <label class="field"><span>Dépôts (FTD)</span><input id="sFtd" type="number" min="0" value="${editing?editing.ftd:0}"/></label>
+        <label class="field"><span>Chiffre d'affaires (€)</span><input id="sRevenue" type="number" min="0" step="0.01" value="${editing?editing.revenue:0}"/></label>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button type="button" class="btn-ghost" style="flex:1;padding:11px" onclick="statModalOpen=false;editStatId=null;render()">Annuler</button>
+        <button class="btn-primary" style="flex:1;border-radius:12px;padding:11px">${editing?"Enregistrer":"Ajouter"}</button>
+      </div>
+    </form>
+  </div>`;
+}
+function submitStatForm(e, affId){
+  e.preventDefault();
+  const a = findAffiliate(affId);
+  const date = document.getElementById("sDate").value || todayStr();
+  const signups = Number(document.getElementById("sSignups").value)||0;
+  const ftd = Number(document.getElementById("sFtd").value)||0;
+  const revenue = Number(document.getElementById("sRevenue").value)||0;
+  if(editStatId){
+    const s = a.dailyStats.find(x=>x.id===editStatId);
+    if(s){ s.date=date; s.signups=signups; s.ftd=ftd; s.deposits=revenue; s.revenue=revenue; s.source="manual"; }
+  } else {
+    a.dailyStats.push({ id: uid("stat"), source: "manual", date, clicks: 0, signups, ftd, deposits:revenue, revenue });
+  }
+  saveData(); statModalOpen=false; editStatId=null; render();
+  return false;
+}
+
+/* ---------------- ADMIN (chef principal) : Sous-chefs ---------------- */
+let chiefFormErr = "";
+function adminChiefsHtml(){
+  return `
+    <div class="anim" style="margin-bottom:20px">
+      <h1 style="font-size:28px;font-weight:800;margin:0">Sous-chefs</h1>
+      <p class="muted" style="margin:6px 0 0;font-size:14px">Chaque sous-chef a son propre mot de passe et ne voit que ses propres sous-affiliés.</p>
+    </div>
+    <form onsubmit="return submitAddChief(event)" class="card anim" style="padding:22px;margin-bottom:20px;display:flex;flex-direction:column;gap:14px;max-width:560px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Ajouter un sous-chef</p>
+      <div class="grid-2">
+        <label class="field"><span>Nom</span><input id="fChiefName" placeholder="Ex : Antoine"/></label>
+        <label class="field"><span>Mot de passe</span><input id="fChiefPass" placeholder="Ex : ant2909"/></label>
+      </div>
+      <label class="field"><span>Commission par défaut (€/dépôt)</span><input id="fChiefComm" type="number" value="20"/></label>
+      ${chiefFormErr?`<p class="err">${esc(chiefFormErr)}</p>`:""}
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Créer l'accès</button>
+    </form>
+    <div class="card anim" style="overflow:hidden">
+      <div style="overflow-x:auto">
+      <table style="min-width:640px">
+        <thead><tr><th>Nom</th><th>Ses sous-affiliés</th><th>Ventes du mois</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+          ${DB.chiefs.map(c=>{
+            const affs = DB.affiliates.filter(a=>a.ownerChiefId===c.id);
+            const sales = affs.reduce((acc,a)=>acc+sumStats(a.dailyStats).revenue,0);
+            return `<tr>
+              <td style="font-weight:700">${esc(c.name)}</td>
+              <td>${affs.length}</td>
+              <td>${eur(sales)}</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn-ghost" style="padding:6px 12px;font-size:12px" onclick="viewAsChief('${c.id}')">Voir son espace</button>
+                <button class="btn-danger" style="margin-left:8px" onclick="removeChief('${c.id}')">Retirer l'accès</button>
+              </td>
+            </tr>`;
+          }).join("") || `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--dim)">Aucun sous-chef pour le moment.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+function submitAddChief(e){
+  e.preventDefault();
+  const name = document.getElementById("fChiefName").value.trim();
+  const pass = document.getElementById("fChiefPass").value.trim();
+  const comm = Number(document.getElementById("fChiefComm").value)||20;
+  if(!name || !pass){ chiefFormErr="Nom et mot de passe sont obligatoires."; render(); return false; }
+  if(pass===DB.passcode || DB.chiefs.some(c=>c.passcode===pass)){ chiefFormErr="Ce mot de passe est déjà utilisé."; render(); return false; }
+  DB.chiefs.push({id:uid("chief"), name, passcode:pass, recruitPercent:10, defaultCommissionPerFtd:comm});
+  chiefFormErr="";
+  saveData(); render();
+  return false;
+}
+function removeChief(chiefId){
+  if(!confirm("Retirer l'accès de ce sous-chef ? Ses sous-affiliés repasseront sous ton propre compte.")) return;
+  DB.affiliates.forEach(a=>{ if(a.ownerChiefId===chiefId) a.ownerChiefId=null; });
+  DB.chiefs = DB.chiefs.filter(c=>c.id!==chiefId);
+  saveData(); render();
+}
+function viewAsChief(chiefId){
+  const chief = findChief(chiefId);
+  if(!chief) return;
+  SESSION = {role:"chief", chiefId:chief.id, name:chief.name, viewedByAdmin:true};
+  VIEW="overview"; render();
+}
+
+/* ---------------- ADMIN/CHIEF : messages ---------------- */
+let messagesOpenId = null;
+function openAdminConversation(id){ messagesOpenId = id; const a = findAffiliate(id); if(a) markReadByAdmin(a); render(); }
+function closeAdminConversation(){ messagesOpenId=null; render(); }
+function adminMessagesHtml(){
+  const affs = visibleAffiliates();
+  if(messagesOpenId){
+    const a = findAffiliate(messagesOpenId);
+    if(!a){ messagesOpenId=null; return adminMessagesHtml(); }
+    return `
+      <div class="anim" style="margin-bottom:20px;display:flex;align-items:center;gap:12px">
+        <button class="btn-ghost" style="padding:8px 12px" onclick="closeAdminConversation()">${icon('arrowleft',16)}</button>
+        <div><h1 style="font-size:22px;font-weight:800;margin:0">${esc(a.name)}</h1><p class="muted" style="margin:2px 0 0;font-size:13px">Code : ${esc(a.code)}</p></div>
+      </div>
+      <div class="card anim" style="padding:20px;max-width:640px">
+        ${messageThreadHtml(a, "admin")}
+        <form onsubmit="return submitAdminMessage(event,'${a.id}')" style="display:flex;gap:10px;margin-top:14px">
+          <input id="adminMsgInput" placeholder="Écris ton message…" autocomplete="off" style="flex:1"/>
+          <button class="btn-primary" style="border-radius:12px;padding:0 20px;flex-shrink:0">${icon('send',15,'#04101f')}</button>
+        </form>
+      </div>`;
+  }
+  const list = affs.slice().sort((x,y)=>{ const lx=(x.messages||[]).slice(-1)[0]; const ly=(y.messages||[]).slice(-1)[0]; return (ly?ly.at:"").localeCompare(lx?lx.at:""); });
+  return `
+    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:28px;font-weight:800;margin:0">Messages</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Conversations avec tes sous-affiliés.</p></div>
+    <div class="card anim" style="overflow:hidden">
+      ${list.length ? list.map(a=>{
+        const last = (a.messages||[]).slice(-1)[0]; const unread = unreadForAdmin(a);
+        return `<div class="row" style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(148,163,184,.08);cursor:pointer" onclick="openAdminConversation('${a.id}')">
+          <div style="min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700">${esc(a.name)}</span>${unread?`<span class="mono" style="background:#eab308;color:#04101f;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:800">${unread}</span>`:""}</div>
+          <p class="muted" style="margin:4px 0 0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px">${last?esc(last.text):"Aucun message."}</p></div>
+          <span class="muted" style="font-size:12px;flex-shrink:0">${last?fmtMsgTime(last.at):""}</span>
+        </div>`;
+      }).join("") : `<div style="text-align:center;padding:40px;color:var(--dim)">Aucun sous-affilié pour le moment.</div>`}
+    </div>`;
+}
+function submitAdminMessage(e, affiliateId){
+  e.preventDefault();
+  const input = document.getElementById("adminMsgInput"); const text = input.value.trim(); if(!text) return false;
+  sendMessage(affiliateId, "admin", text); input.value=""; render();
+  requestAnimationFrame(()=>{ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; });
+  return false;
+}
+
+/* ---------------- ADMIN : parrainages (%) ---------------- */
+function adminReferralsHtml(){
+  const affs = visibleAffiliates();
+  const links = affs.filter(a=>a.referredBy).map(f=>({ filleul:f, sponsor: findAffiliate(f.referredBy), amount: referralEarningsFor(f) })).filter(r=>r.sponsor);
+  const totalPaid = links.reduce((acc,r)=>acc+r.amount,0);
+  return `
+    <div class="anim" style="margin-bottom:20px">
+      <h1 style="font-size:28px;font-weight:800;margin:0">Parrainages</h1>
+      <p class="muted" style="margin:6px 0 0;font-size:14px">${links.length} parrainage(s) actif(s) · ${DB.referralPercent||0}% du CA du filleul</p>
+    </div>
+    <div class="grid-kpi" style="margin-bottom:20px">
+      ${statCard('gift','Parrainages actifs', links.length, 0)}
+      ${statCard('dollar','Commissions de parrainage', eur(totalPaid), 60)}
+    </div>
+    <div class="card anim" style="overflow:hidden">
+      <div style="overflow-x:auto">
+      <table style="min-width:640px">
+        <thead><tr><th>Parrain</th><th>Filleul</th><th>CA du filleul</th><th>Commission (${DB.referralPercent||0}%)</th></tr></thead>
+        <tbody>
+          ${links.map(r=>`<tr>
+            <td style="font-weight:700">${esc(r.sponsor.name)}</td>
+            <td>${esc(r.filleul.name)}</td>
+            <td>${eur(sumStats(r.filleul.dailyStats).revenue)}</td>
+            <td style="color:#5c9cf8;font-weight:700">${eur(r.amount)}</td>
+          </tr>`).join("") || `<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--dim)">Aucun parrainage pour le moment.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- ADMIN : réglages ---------------- */
+function adminSettingsHtml(){
+  return `
+    <div class="anim" style="margin-bottom:20px;max-width:560px">
+      <h1 style="font-size:28px;font-weight:800;margin:0">Réglages</h1>
+      <p class="muted" style="margin:6px 0 0;font-size:14px">Configuration générale</p>
+    </div>
+    <form onsubmit="return submitCommSettings(event)" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Commission par défaut</p>
+      <div class="grid-2">
+        <label class="field"><span>Par dépôt (€)</span><input id="fDefaultComm" type="number" min="0" step="0.5" value="${DB.defaultCommissionPerFtd||20}"/></label>
+        <label class="field"><span>Parrainage (% du CA)</span><input id="fRefPct" type="number" min="0" step="0.5" value="${DB.referralPercent||10}"/></label>
+      </div>
+      <p id="commMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Enregistrer</button>
+    </form>
+    <form onsubmit="return submitSignupConfig(event)" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Inscription publique</p>
+      <label class="field" style="flex-direction:row;align-items:center;gap:10px"><input id="fAllowSignup" type="checkbox" style="width:auto" ${DB.allowSelfSignup?'checked':''}/><span style="text-transform:none;font-size:14px;font-weight:400;color:var(--text)">Activer</span></label>
+      <div class="grid-2">
+        <label class="field"><span>Nom du lien</span><input id="fDefaultBaseLinkLabel" value="${esc(DB.defaultBaseLinkLabel||'Signup')}"/></label>
+        <label class="field"><span>Lien de base</span><input id="fDefaultBaseLink" value="${esc(DB.defaultBaseLink||'')}" placeholder="https://lolly-bet888.com?faff=958"/></label>
+      </div>
+      <p id="signupMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Enregistrer</button>
+    </form>
+    <form onsubmit="return submitPasscodeChange(event)" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Ton mot de passe (chef)</p>
+      <label class="field"><span>Mot de passe actuel</span><input id="pCurrent" type="password"/></label>
+      <label class="field"><span>Nouveau mot de passe</span><input id="pNext" type="password"/></label>
+      <p id="passMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Mettre à jour</button>
+    </form>
+    <div class="card anim" style="padding:22px;max-width:560px;border-color:rgba(248,113,113,.25);display:flex;flex-direction:column;gap:10px">
+      <h2 style="font-size:15px;font-weight:700;margin:0;color:#fca5a5">Zone de danger</h2>
+      <p class="muted" style="font-size:13px;margin:0">Efface toutes les données du serveur, sans retour possible.</p>
+      <button class="btn-ghost" style="border-color:rgba(248,113,113,.35);color:#fca5a5;padding:10px 16px;width:fit-content" onclick="resetAllData()">Réinitialiser toutes les données</button>
+    </div>
+  `;
+}
+function submitCommSettings(e){
+  e.preventDefault();
+  DB.defaultCommissionPerFtd = Number(document.getElementById("fDefaultComm").value)||20;
+  DB.referralPercent = Number(document.getElementById("fRefPct").value)||10;
+  saveData();
+  const msg=document.getElementById("commMsg"); msg.className="ok"; msg.textContent="Enregistré ✔";
+  return false;
+}
+function submitSignupConfig(e){
+  e.preventDefault();
+  DB.allowSelfSignup = document.getElementById("fAllowSignup").checked;
+  DB.defaultBaseLink = document.getElementById("fDefaultBaseLink").value.trim();
+  DB.defaultBaseLinkLabel = document.getElementById("fDefaultBaseLinkLabel").value.trim() || "Signup";
+  saveData();
+  const msg=document.getElementById("signupMsg"); msg.className="ok"; msg.textContent="Enregistré ✔";
+  return false;
+}
+function submitPasscodeChange(e){
+  e.preventDefault();
+  const cur=document.getElementById("pCurrent").value; const next=document.getElementById("pNext").value.trim();
+  const msg=document.getElementById("passMsg");
+  if(cur!==DB.passcode){ msg.className="err"; msg.textContent="Mot de passe actuel incorrect."; return false; }
+  if(next.length<4){ msg.className="err"; msg.textContent="Le nouveau mot de passe doit contenir au moins 4 caractères."; return false; }
+  if(DB.chiefs.some(c=>c.passcode===next)){ msg.className="err"; msg.textContent="Ce mot de passe est déjà utilisé par un sous-chef."; return false; }
+  DB.passcode=next; saveData();
+  msg.className="ok"; msg.textContent="Mot de passe mis à jour ✔";
+  document.getElementById("pCurrent").value=""; document.getElementById("pNext").value="";
+  return false;
+}
+function resetAllData(){
+  if(!confirm("Confirmer la suppression définitive de toutes les données ?")) return;
+  const keepPass = DB.passcode;
+  DB = defaultDB();
+  DB.passcode = keepPass;
+  saveData(); render();
+}
+
+/* ---------------- CHIEF (sous-chef) : réglages ---------------- */
+function chiefSettingsHtml(){
+  const chief = findChief(SESSION.chiefId);
+  return `
+    <div class="anim" style="margin-bottom:20px;max-width:560px">
+      <h1 style="font-size:28px;font-weight:800;margin:0">Réglages</h1>
+      <p class="muted" style="margin:6px 0 0;font-size:14px">Ton compte sous-chef</p>
+    </div>
+    <form onsubmit="return submitChiefComm(event)" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Commission par défaut pour tes nouveaux sous-affiliés</p>
+      <label class="field"><span>Montant par dépôt (€)</span><input id="fChiefDefComm" type="number" value="${chief.defaultCommissionPerFtd||20}"/></label>
+      <p id="chiefCommMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Enregistrer</button>
+    </form>
+    <form onsubmit="return submitChiefPass(event)" class="card anim" style="padding:22px;max-width:560px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Ton mot de passe</p>
+      <label class="field"><span>Nouveau mot de passe</span><input id="fChiefNewPass" type="password" placeholder="••••••••"/></label>
+      <p id="chiefPassMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Mettre à jour</button>
+    </form>
+  `;
+}
+function submitChiefComm(e){
+  e.preventDefault();
+  const chief = findChief(SESSION.chiefId);
+  chief.defaultCommissionPerFtd = Number(document.getElementById("fChiefDefComm").value)||20;
+  saveData();
+  const msg=document.getElementById("chiefCommMsg"); msg.className="ok"; msg.textContent="Enregistré ✔";
+  return false;
+}
+function submitChiefPass(e){
+  e.preventDefault();
+  const next = document.getElementById("fChiefNewPass").value.trim();
+  const msg=document.getElementById("chiefPassMsg");
+  if(next.length<4){ msg.className="err"; msg.textContent="Au moins 4 caractères."; return false; }
+  if(next===DB.passcode || DB.chiefs.some(c=>c.id!==SESSION.chiefId && c.passcode===next)){ msg.className="err"; msg.textContent="Ce mot de passe est déjà utilisé."; return false; }
+  findChief(SESSION.chiefId).passcode = next;
+  saveData();
+  msg.className="ok"; msg.textContent="Mot de passe mis à jour ✔";
+  return false;
+}
+
+function allTrackingLinks(a){
+  const rows = (a.baseLinks && a.baseLinks.length) ? a.baseLinks : [];
+  return rows.filter(r=>r.url).map(r=>{ const sep = r.url.includes("?") ? "&" : "?"; return { label: r.label||"Lien", link: r.url + sep + "sub=" + encodeURIComponent(a.code||"") }; });
+}
+function genRandomCode(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = ""; for(let i=0;i<6;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+function copyMyLink(link){
+  navigator.clipboard.writeText(link).then(()=>{
+    const btn = event.target; const old = btn.textContent;
+    btn.textContent = "Copié ✔"; setTimeout(()=>{ btn.textContent = old; }, 1500);
+  });
+}
+
+/* ---------------- MEMBER: rewards ---------------- */
+function memberRewardsHtml(a){
+  const totalFtd = sumStats(a.dailyStats).ftd;
+  const tiers = (DB.rewardTiers||[]).slice().sort((x,y)=>x.ftd-y.ftd);
+  return `
+    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:28px;font-weight:800;margin:0">Rewards</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Débloque des primes en cumulant des dépôts.</p></div>
+    <div class="card anim" style="padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <span class="muted" style="font-size:13px">Ton total de dépôts confirmés</span><span style="font-size:22px;font-weight:800">${numf(totalFtd)}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      ${tiers.length ? tiers.map((t,i)=>{
+        const pct = t.ftd>0 ? Math.min(100, (totalFtd/t.ftd)*100) : 0; const done = totalFtd>=t.ftd;
+        return `<div class="card anim" style="padding:20px;animation-delay:${i*40}ms">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:12px"><div class="badge">${icon(done?'shield':'gift',18)}</div>
+            <div><h3 style="margin:0;font-size:15px;font-weight:700">Palier ${numf(t.ftd)} dépôts</h3></div></div>
+            <span class="pill" style="color:${done?'#6ee7b7':'#5c9cf8'};background:${done?'rgba(52,211,153,.12)':'rgba(52,104,224,.12)'};border:1px solid ${done?'rgba(52,211,153,.35)':'rgba(96,156,248,.3)'}">+${eur(t.amount)}</span>
+          </div>
+          <div style="margin-top:14px"><div style="height:8px;border-radius:999px;background:rgba(148,163,184,.12);overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:999px"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--dim)"><span>${done?"Débloqué ✔":"Progression"}</span><span>${numf(Math.min(totalFtd,t.ftd))} / ${numf(t.ftd)}</span></div></div>
+        </div>`;
+      }).join("") : `<div class="card" style="padding:32px;text-align:center;color:var(--dim)">Aucun reward configuré.</div>`}
+    </div>`;
+}
+
+/* ---------------- MEMBER: tutoriel détaillé ---------------- */
+function memberTutorialHtml(a){
+  const links = allTrackingLinks(a); const mainLink = links[0] ? links[0].link : "";
+  return `
+    <div class="anim" style="margin-bottom:20px">
+      <h1 style="font-size:26px;font-weight:800;margin:0">Comment générer tes premiers dépôts</h1>
+      <p class="muted" style="margin:8px 0 0;font-size:14px">Guide complet — suis-le dans l'ordre, tu n'as besoin de rien d'autre pour démarrer.</p>
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:14px">
+      <h3 style="margin:0 0 8px;font-size:16px">1. Récupère ton lien personnel</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">Chaque inscription et chaque dépôt via ce lien est automatiquement rattaché à toi.</p>
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(148,163,184,.08);padding:10px 14px;border-radius:10px">
+        <span class="mono" style="flex:1;font-size:12px;word-break:break-all">${esc(mainLink)||"Aucun lien configuré — contacte l'administrateur."}</span>
+        ${mainLink?`<button class="btn-ghost" style="padding:6px 12px;flex-shrink:0" onclick="navigator.clipboard?.writeText('${esc(mainLink)}')">${icon('copy',14)}</button>`:""}
+      </div>
+      <div style="background:rgba(52,104,224,.1);border:1px solid rgba(96,156,248,.3);border-radius:10px;padding:12px 14px;font-size:13px;color:#bfe0ff;margin-top:12px">⚠️ Ne change jamais ce lien une fois que tu commences à publier.</div>
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:14px">
+      <h3 style="margin:0 0 10px;font-size:16px">2. Place ton lien là où les gens le verront</h3>
+      <p style="font-weight:700;font-size:14px;margin:0 0 6px">📱 TikTok / Instagram</p>
+      <ul style="margin:0 0 14px;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Profil → Modifier le profil → colle ton lien dans "Site web"</li>
+        <li>Rappelle-le en story avec un sticker "lien" cliquable, 2-3 fois/semaine</li>
+        <li>En fin de vidéo : "lien en bio" — jamais le lien complet à l'écran</li>
+      </ul>
+      <p style="font-weight:700;font-size:14px;margin:0 0 6px">💬 Telegram</p>
+      <ul style="margin:0 0 14px;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Crée un canal/groupe dédié, lien dans la description</li>
+        <li>Épingle un message avec ton lien — c'est ce qui convertit le mieux</li>
+      </ul>
+      <p style="font-weight:700;font-size:14px;margin:0 0 6px">✅ WhatsApp</p>
+      <ul style="margin:0;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Lien dans la description de ton statut ou d'un groupe</li>
+        <li>Évite le démarchage en message privé non sollicité</li>
+      </ul>
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:14px">
+      <h3 style="margin:0 0 10px;font-size:16px">3. Crée du contenu qui convertit vraiment</h3>
+      <ul style="margin:0;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Accroche dans les 3 premières secondes</li>
+        <li>Format vertical, 15-60 secondes</li>
+        <li>Montre une situation concrète plutôt qu'une promesse vague</li>
+        <li>Un seul call-to-action clair à la fin : "lien en bio"</li>
+      </ul>
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:14px">
+      <h3 style="margin:0 0 10px;font-size:16px">4. Poste au bon moment, avec régularité</h3>
+      <ul style="margin:0;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Heures de pointe : 18h-23h, engagement plus fort le week-end</li>
+        <li>Ne change pas ton lien en bio pendant 48h minimum après une publication</li>
+        <li>Vise 1 publication par jour minimum</li>
+      </ul>
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:20px">
+      <h3 style="margin:0 0 10px;font-size:16px">5. Suis tes résultats et ajuste</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">Chaque inscription et dépôt apparaissent sur ton <a href="#" onclick="event.preventDefault();setView('overview')" style="color:#5c9cf8">tableau de bord</a>.</p>
+      <ul style="margin:0;padding-left:18px;color:var(--dim);font-size:13.5px;line-height:1.9">
+        <li>Change une seule variable à la fois pour savoir ce qui a fait la différence</li>
+        <li>Note ce que tu postes et quand</li>
+      </ul>
+    </div>
+    <h2 style="font-size:18px;margin:0 0 12px">Questions fréquentes</h2>
+    <div class="card anim" style="padding:8px 22px">
+      <details style="padding:12px 0;border-bottom:1px solid rgba(148,163,184,.08)"><summary style="cursor:pointer;font-weight:700;font-size:14px">Dois-je préciser que je suis affilié ?</summary><p style="color:var(--dim);font-size:13px;margin:8px 0 0">Oui, une mention "lien affilié" ou "partenaire" renforce la confiance.</p></details>
+      <details style="padding:12px 0;border-bottom:1px solid rgba(148,163,184,.08)"><summary style="cursor:pointer;font-weight:700;font-size:14px">Puis-je promettre des gains garantis ?</summary><p style="color:var(--dim);font-size:13px;margin:8px 0 0">Non, jamais. Garde un ton responsable autour du jeu.</p></details>
+      <details style="padding:12px 0"><summary style="cursor:pointer;font-weight:700;font-size:14px">Mon audience doit-elle être majeure ?</summary><p style="color:var(--dim);font-size:13px;margin:8px 0 0">Oui, systématiquement.</p></details>
+    </div>
+  `;
+}
+
+/* ---------------- MEMBER: messages ---------------- */
+function memberMessagesHtml(a){
+  markReadByMember(a);
+  return `
+    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:28px;font-weight:800;margin:0">Messages</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Échange avec l'administrateur.</p></div>
+    <div class="card anim" style="padding:20px;max-width:640px">
+      ${messageThreadHtml(a, "member")}
+      <form onsubmit="return submitMemberMessage(event,'${a.id}')" style="display:flex;gap:10px;margin-top:14px">
+        <input id="memberMsgInput" placeholder="Écris ton message…" autocomplete="off" style="flex:1"/>
+        <button class="btn-primary" style="border-radius:12px;padding:0 20px;flex-shrink:0">${icon('send',15,'#04101f')}</button>
+      </form>
+    </div>`;
+}
+function submitMemberMessage(e, affiliateId){
+  e.preventDefault();
+  const input = document.getElementById("memberMsgInput"); const text = input.value.trim(); if(!text) return false;
+  sendMessage(affiliateId, "member", text); input.value=""; render();
+  requestAnimationFrame(()=>{ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; });
+  return false;
+}
+
+/* ---------------- MEMBER dashboard ---------------- */
+let memberPeriod="day";
+function memberDashboardHtml(a){
+  const t = sumStats(a.dailyStats); const commission = t.ftd*(a.commissionPerFtd||0);
+  const chartData = groupStats(a.dailyStats, memberPeriod);
+  const sorted = [...a.dailyStats].sort((x,y)=>y.date.localeCompare(x.date));
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px">${notifButtonHtml(NOTIF_MEMBER_KEY)}</div>
+    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:24px;font-weight:800;margin:0">Tableau de bord</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Aperçu de ton activité</p></div>
+    <div class="card anim" style="padding:20px 22px;margin-bottom:20px">
+      <p style="font-size:12px;color:var(--dim);margin:0 0 12px;font-weight:600">Tes liens d'affiliation</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${allTrackingLinks(a).length? allTrackingLinks(a).map(l=>`
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:rgba(255,255,255,.03);border-radius:10px">
+            <p class="mono" style="font-size:13px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:440px">${esc(l.link)}</p>
+            <button class="btn-primary" style="border-radius:10px;padding:8px 16px;flex-shrink:0" onclick="copyMyLink('${esc(l.link).replace(/'/g,"\\'")}')">Copier</button>
+          </div>`).join("") : `<p class="muted" style="font-size:13px;margin:0">Pas encore configuré — contacte ton admin.</p>`}
+      </div>
+    </div>
+    <div class="grid-kpi" style="margin-bottom:20px">
+      ${statCard('userplus','Inscriptions', numf(t.signups),0)}
+      ${statCard('trend','Dépôts', numf(t.ftd),60)}
+      ${statCard('dollar','Ta commission', eur(commission),120)}
+      ${statCard('dollar',"Chiffre d'affaires", eur(t.revenue),180)}
+    </div>
+    <div class="card anim" style="padding:22px;margin-bottom:20px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px"><h2 style="font-size:17px;font-weight:700;margin:0">Revenu généré</h2>${periodToggle(memberPeriod,'setMemberPeriod')}</div>
+      ${chartData.length? `<div style="height:260px"><canvas id="memberChart"></canvas></div>` : `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px">Tes stats apparaîtront ici.</div>`}
+    </div>
+    <div class="card anim" style="padding:22px">
+      <h2 style="font-size:17px;font-weight:700;margin:0 0 16px">Historique</h2>
+      <div style="overflow-x:auto"><table style="min-width:560px">
+        <thead><tr><th>Date</th><th>Inscriptions</th><th>Dépôts</th><th>CA</th><th>Ta commission</th></tr></thead>
+        <tbody>${sorted.map(s=>`<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString('fr-FR')}</td><td>${numf(s.signups)}</td><td>${numf(s.ftd)}</td><td>${eur(s.revenue)}</td><td style="color:#5c9cf8;font-weight:700">${eur(s.ftd*(a.commissionPerFtd||0))}</td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--dim)">Aucune donnée pour le moment.</td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+}
+function setMemberPeriod(p){ memberPeriod=p; render(); }
+
+/* ---------------- MEMBER: paramètres ---------------- */
+function memberSettingsHtml(a){
+  const p = a.paymentInfo || {};
+  return `
+    <div class="anim" style="margin-bottom:20px;max-width:560px"><h1 style="font-size:28px;font-weight:800;margin:0">Paramètres</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Ton compte et tes infos de paiement</p></div>
+    <form onsubmit="return submitMemberAccount(event,'${a.id}')" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Compte</p>
+      <label class="field"><span>Email</span><input id="fEmail" value="${esc(a.email||'')}" placeholder="ton@email.com"/></label>
+      <label class="field"><span>Nouveau code d'accès</span><input id="fNewCode" type="password" placeholder="Laisser vide pour ne pas changer"/></label>
+      <p id="accountMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Enregistrer</button>
+    </form>
+    <form onsubmit="return submitPaymentInfo(event,'${a.id}')" class="card anim" style="padding:22px;max-width:560px;margin-bottom:16px;display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Infos de paiement</p>
+      <label class="field"><span>Titulaire du compte</span><input id="fPayHolder" value="${esc(p.holder||'')}"/></label>
+      <label class="field"><span>IBAN</span><input id="fPayIban" value="${esc(p.iban||'')}"/></label>
+      <p id="payMsg"></p>
+      <button class="btn-primary" style="border-radius:12px;padding:11px;width:fit-content;padding-left:24px;padding-right:24px">Enregistrer</button>
+    </form>
+    <div class="card anim" style="padding:22px;max-width:560px">
+      <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Session</p>
+      <button class="btn-danger" onclick="logout()">Déconnexion</button>
+    </div>`;
+}
+function submitMemberAccount(e, affId){
+  e.preventDefault();
+  const a = findAffiliate(affId); if(!a) return false;
+  a.email = document.getElementById("fEmail").value.trim();
+  const newCode = document.getElementById("fNewCode").value.trim();
+  if(newCode) a.code = newCode;
+  saveData();
+  const msg=document.getElementById("accountMsg"); msg.className="ok"; msg.textContent="Enregistré ✔";
+  return false;
+}
+function submitPaymentInfo(e, affId){
+  e.preventDefault();
+  const a = findAffiliate(affId); if(!a) return false;
+  a.paymentInfo = { holder: document.getElementById("fPayHolder").value.trim(), iban: document.getElementById("fPayIban").value.trim(), updatedAt: new Date().toISOString() };
+  saveData();
+  const msg=document.getElementById("payMsg"); msg.className="ok"; msg.textContent="Enregistré ✔";
+  return false;
+}
+
+/* ---------------- MEMBER: parrainage (%) ---------------- */
+function memberReferralHtml(a){
+  const myFilleuls = filleulsOf(a.id); const totalRef = totalReferralEarnings(a.id);
+  const regLink = `${location.origin}${location.pathname}?ref=${encodeURIComponent(a.code)}`;
+  return `
+    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:28px;font-weight:800;margin:0">Parrainage</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Touche ${DB.referralPercent||0}% du chiffre d'affaires généré par chaque filleul.</p></div>
+    <div class="card anim" style="padding:22px;margin-bottom:20px">
+      <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase">Ton lien de parrainage</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="mono" style="background:rgba(148,163,184,.08);padding:8px 14px;border-radius:10px;font-size:13px;word-break:break-all">${esc(regLink)}</span>
+        <button class="btn-ghost" style="padding:8px 14px" onclick="navigator.clipboard?.writeText('${esc(regLink)}')">${icon('copy',14)} Copier</button>
+      </div>
+    </div>
+    <div class="grid-kpi" style="margin-bottom:20px">
+      ${statCard('users','Filleuls', myFilleuls.length, 0)}
+      ${statCard('gift','Revenus de parrainage', eur(totalRef), 60)}
+    </div>
+    <div class="card anim" style="overflow:hidden">
+      <div style="padding:18px 20px 0"><h2 style="font-size:15px;font-weight:700;margin:0">Mes filleuls</h2></div>
+      <div style="overflow-x:auto"><table style="min-width:480px">
+        <thead><tr><th>Nom</th><th>Statut</th><th>CA généré</th><th>Ta commission (${DB.referralPercent||0}%)</th></tr></thead>
+        <tbody>${myFilleuls.map(f=>`<tr><td style="font-weight:700">${esc(f.name)}</td><td>${statusPill(f.status)}</td><td>${eur(sumStats(f.dailyStats).revenue)}</td><td style="color:#5c9cf8;font-weight:700">${eur(referralEarningsFor(f))}</td></tr>`).join("") || `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--dim)">Tu n'as encore parrainé personne.</td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ---------------- main render / router ---------------- */
+function render(){
+  if(!SESSION){ renderLogin(); return; }
+  const app = document.getElementById("app");
+
+  if(SESSION.role==="admin" || SESSION.role==="chief"){
+    const isChief = SESSION.role==="chief";
+    const roleLabel = isChief ? `Sous-chef` : "Administrateur";
+    const activeName = isChief ? SESSION.name : "Administrateur";
+    const nav = [
+      {key:"overview", label:"Vue d'ensemble", icon:"layout"},
+      {key:"affiliates", label:"Sous-affiliés", icon:"users", badge:(SESSION.role==="admin"?(DB.pendingSignups||[]).length:0)||undefined},
+      {key:"messages", label:"Messages", icon:"message", badge: totalUnreadForAdmin()||undefined},
+    ];
+    if(!isChief){
+      nav.push({key:"referrals", label:"Parrainages", icon:"gift"});
+      nav.push({key:"chiefs", label:"Sous-chefs", icon:"crown"});
+    }
+    nav.push({key:"settings", label:"Réglages", icon:"settings"});
+    let content = "";
+    if(VIEW==="overview") content = adminOverviewHtml();
+    else if(VIEW==="affiliates") content = adminAffiliatesHtml();
+    else if(VIEW==="messages") content = adminMessagesHtml();
+    else if(VIEW==="referrals" && !isChief) content = adminReferralsHtml();
+    else if(VIEW==="chiefs" && !isChief) content = adminChiefsHtml();
+    else if(VIEW==="settings") content = isChief ? chiefSettingsHtml() : adminSettingsHtml();
+    else content = adminOverviewHtml();
+    app.innerHTML = shell(nav, activeName, roleLabel, content);
+    if(VIEW==="overview"){ const affs=visibleAffiliates(); const d=groupStats(affs.flatMap(a=>a.dailyStats), adminPeriod); if(d.length) renderAreaChart("adminChart", d); }
+    if(VIEW==="affiliates" && detailId){ const a=findAffiliate(detailId); if(a){ const d=groupStats(a.dailyStats, detailPeriod); if(d.length) renderAreaChart("detailChart", d); } }
+    if(VIEW==="messages" && messagesOpenId){ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; }
+    return;
+  }
+
+  const a = findAffiliate(SESSION.id);
+  if(!a){
+    app.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div class="card" style="padding:32px;max-width:360px;text-align:center"><p style="margin:0 0 16px">Ton compte n'est plus disponible.</p>
+      <button class="btn-primary" style="border-radius:12px;padding:10px 20px" onclick="logout()">Retour à la connexion</button></div></div>`;
+    return;
+  }
+  const nav = [
+    {key:"overview", label:"Tableau de bord", icon:"layout"},
+    {key:"tutorial", label:"Tutoriel", icon:"book"},
+    {key:"referral", label:"Parrainage", icon:"gift"},
+    {key:"rewards", label:"Rewards", icon:"gift"},
+    {key:"messages", label:"Messages", icon:"message", badge: unreadForMember(a)||undefined},
+    {key:"settings", label:"Paramètres", icon:"settings"},
+  ];
+  let memberContent;
+  if(VIEW==="referral") memberContent = memberReferralHtml(a);
+  else if(VIEW==="tutorial") memberContent = memberTutorialHtml(a);
+  else if(VIEW==="rewards") memberContent = memberRewardsHtml(a);
+  else if(VIEW==="messages") memberContent = memberMessagesHtml(a);
+  else if(VIEW==="settings") memberContent = memberSettingsHtml(a);
+  else memberContent = memberDashboardHtml(a);
+  app.innerHTML = shell(nav, a.name, "Partenaire", memberContent);
+  if(VIEW==="messages"){ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; }
+  if(VIEW==="overview"){ const d = groupStats(a.dailyStats, memberPeriod); if(d.length) renderAreaChart("memberChart", d); }
+}
+
+render();
+fetchRemoteDB().then(checkFtdNotifications);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
