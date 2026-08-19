@@ -2,9 +2,21 @@
   "name": "lexora",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "build": "echo 'No build step needed'",
-    "vercel-build": "echo 'No build step needed'"
+    "dev": "next dev",
+    "build": "next build",
+    "vercel-build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.3"
   }
 }
