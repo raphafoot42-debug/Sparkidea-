@@ -77,6 +77,24 @@
   .ok{color:#6ee7b7;font-size:12px;font-weight:600;}
   .muted{color:var(--dim);}
   .mono{font-family:ui-monospace,monospace;}
+  .stat-card2{padding:16px 16px 0;position:relative;overflow:hidden;height:118px;border-radius:18px;}
+  .stat-card2.green{background:linear-gradient(180deg, rgba(16,60,45,.55), rgba(12,17,30,.55));border-color:rgba(52,211,153,.25) !important;}
+  .stat-card2.gold{background:linear-gradient(180deg, rgba(70,45,10,.5), rgba(12,17,30,.55));border-color:rgba(255,184,74,.3) !important;}
+  .stat-label2{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);}
+  .stat-val2{font-size:25px;font-weight:800;margin-top:8px;}
+  .spark{position:absolute;bottom:0;left:0;right:0;height:42px;}
+  .level-card{background:linear-gradient(135deg, rgba(52,104,224,.18), rgba(255,184,74,.10));border:1px solid rgba(96,156,248,.3);border-radius:18px;padding:16px 18px;margin-bottom:16px;}
+  .xp-bar{height:9px;border-radius:999px;background:rgba(148,163,184,.15);overflow:hidden;}
+  .xp-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:999px;}
+  .xp-label{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:6px;}
+  .bottomnav{display:none;}
+  @media(max-width:767px){
+    .bottomnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:rgba(8,10,18,.92);backdrop-filter:blur(18px);border-top:1px solid rgba(96,156,248,.12);justify-content:space-around;padding:8px 6px 16px;z-index:40;}
+    .content{padding-bottom:90px !important;}
+  }
+  .navbtn2{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--dim);font-size:10px;font-weight:600;background:none;border:none;padding:4px;}
+  .navbtn2.active{color:#ffb84a;}
+  .navbtn2 svg{width:19px;height:19px;}
 </style>
 </head>
 <body>
@@ -121,11 +139,8 @@ const REMOTE_URL = SYNC_API_URL;
 function defaultDB(){
   return {
     affiliates: [],
-    passcode: "290942",           // Chef (toi)
-    chiefs: [                     // Sous-chefs : chacun son mot de passe, sa commission de recrutement (%), et ses propres sous-affiliés (ownerChiefId)
-      {id:"chief_antoine", name:"Antoine", passcode:"joRd@ne7", recruitPercent:10, defaultCommissionPerFtd:20},
-      {id:"chief_michel", name:"Michel", passcode:"mhl", recruitPercent:10, defaultCommissionPerFtd:20}
-    ],
+    passcode: "",           // Chef (à définir à la 1ère connexion)
+    chiefs: [],
     mainTrackingLink: "",
     syncConfig: { apiUrl: "", apiKey: "" },
     referralPercent: 10,          // Parrainage : % du CA du filleul (remplace l'ancien bonus fixe par FTD)
@@ -433,6 +448,37 @@ function renderAreaChart(canvasId, data, key="revenue", formatter=eur){
   });
 }
 
+let sparkCharts = {};
+function cumulativeSeries(list, key){
+  const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
+  let sum = 0;
+  const series = sorted.map(s => { sum += (+s[key]||0); return sum; });
+  return series.length ? series : [0];
+}
+function drawSpark(id, data, color){
+  requestAnimationFrame(()=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(sparkCharts[id]) sparkCharts[id].destroy();
+    const grad = el.getContext('2d').createLinearGradient(0,0,0,42);
+    grad.addColorStop(0, color+'55'); grad.addColorStop(1, color+'00');
+    sparkCharts[id] = new Chart(el, {
+      type:'line',
+      data:{ labels:data.map((_,i)=>i), datasets:[{ data, borderColor:color, borderWidth:2, backgroundColor:grad, fill:true, tension:0.35, pointRadius:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{duration:350}, plugins:{legend:{display:false},tooltip:{enabled:false}}, scales:{x:{display:false},y:{display:false}} }
+    });
+  });
+}
+// Carte stat avec mini-graphique en direct, calculé depuis les vraies données (dailyStats).
+function sparkStatCard(sparkId, label, value, color, accent, delay=0){
+  const cls = accent ? ' stat-card2 '+accent : ' stat-card2';
+  return `<div class="card anim${cls}" style="animation-delay:${delay}ms">
+    <div class="stat-label2">${esc(label)}</div>
+    <div class="stat-val2"${color?` style=\"color:${color}\"`:""}>${value}</div>
+    <canvas class="spark" id="${sparkId}"></canvas>
+  </div>`;
+}
+
 /* ---------------- LOGIN ---------------- */
 let loginTab = urlRefCode ? "register" : "member";
 let signupSuccess = "";
@@ -546,8 +592,12 @@ function submitMemberLogin(e){
 function submitAdminLogin(e){
   e.preventDefault();
   const code = document.getElementById("adminCode").value.trim();
-  if(code===DB.passcode){ SESSION={role:"admin"}; VIEW="overview"; render(); return false; }
-  const chief = DB.chiefs.find(c=>c.passcode===code);
+  const storedPass = localStorage.getItem("lexora_admin_passcode") || DB.passcode;
+  if(storedPass && code === storedPass){
+    DB.passcode = storedPass;
+    SESSION={role:"admin"}; VIEW="overview"; render(); return false;
+  }
+  const chief = (DB.chiefs||[]).find(c=>c.passcode && c.passcode===code);
   if(chief){ SESSION={role:"chief", chiefId:chief.id, name:chief.name}; VIEW="overview"; render(); return false; }
   renderLogin("Mot de passe incorrect.");
   return false;
@@ -584,6 +634,9 @@ function shell(navItems, activeName, roleLabel, contentHtml){
       <span style="font-weight:700;font-size:14px">Lexora</span>
       <button onclick="toggleMobileMenu()" style="background:rgba(96,156,248,.1);border:none;border-radius:10px;padding:8px;cursor:pointer">${icon('menu',18,'#e7ebf7')}</button>
     </div>
+    <nav class="bottomnav">
+      ${navItems.slice(0,4).map(n=>`<button class="navbtn2 ${VIEW===n.key?'active':''}" onclick="setView('${n.key}')">${icon(n.icon,19,VIEW===n.key?'#ffb84a':'#8892b0')}${esc(n.label.split(' ')[0])}</button>`).join("")}
+    </nav>
     ${mobileMenuOpen?`
     <div onclick="toggleMobileMenu()" style="position:fixed;inset:0;z-index:20;background:rgba(5,7,13,.96);animation:fadeIn .2s ease both">
       <div style="padding-top:80px;padding-left:20px;padding-right:20px;display:flex;flex-direction:column;gap:8px" onclick="event.stopPropagation()">
@@ -615,10 +668,10 @@ function adminOverviewHtml(){
       ${notifButtonHtml(NOTIF_ADMIN_KEY)}
     </div>
     <div class="grid-kpi" style="margin-bottom:20px">
-      ${statCard('users','Sous-affiliés', affs.length, 0)}
-      ${statCard('userCheck','Actifs', activeCount, 60)}
-      ${statCard('dollar','Revenus générés', eur(t.revenue), 120)}
-      ${statCard('wallet','Commissions à payer', eur(commissionsDue), 180)}
+      ${sparkStatCard('sp-adm-clicks','Visites', numf(t.clicks), null, null, 0)}
+      ${sparkStatCard('sp-adm-signups','Inscriptions', numf(t.signups), null, null, 60)}
+      ${sparkStatCard('sp-adm-ftd','Dépôts', numf(t.ftd), null, 'green', 120)}
+      ${sparkStatCard('sp-adm-comm','Commissions à payer', eur(commissionsDue), '#fde68a', 'gold', 180)}
     </div>
     <div class="card anim" style="padding:22px;margin-bottom:20px;animation-delay:220ms">
       <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px">
@@ -628,8 +681,8 @@ function adminOverviewHtml(){
       ${chartData.length? `<div style="height:260px"><canvas id="adminChart"></canvas></div>` : `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px">Aucune donnée pour le moment.</div>`}
     </div>
     <div class="grid-2" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:300ms">${icon('userplus',18)}<div><p class="muted" style="font-size:12px;margin:0">Inscriptions</p><p style="font-weight:700;margin:2px 0 0">${numf(t.signups)}</p></div></div>
-      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:340ms">${icon('trend',18)}<div><p class="muted" style="font-size:12px;margin:0">Dépôts (FTD)</p><p style="font-weight:700;margin:2px 0 0">${numf(t.ftd)}</p></div></div>
+      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:300ms">${icon('users',18)}<div><p class="muted" style="font-size:12px;margin:0">Sous-affiliés</p><p style="font-weight:700;margin:2px 0 0">${affs.length} (${activeCount} actifs)</p></div></div>
+      <div class="card anim" style="padding:18px;display:flex;align-items:center;gap:12px;animation-delay:340ms">${icon('dollar',18)}<div><p class="muted" style="font-size:12px;margin:0">Revenus générés</p><p style="font-weight:700;margin:2px 0 0">${eur(t.revenue)}</p></div></div>
     </div>
   `;
 }
@@ -1246,10 +1299,31 @@ function memberDashboardHtml(a){
   const t = sumStats(a.dailyStats); const commission = t.ftd*(a.commissionPerFtd||0);
   const chartData = groupStats(a.dailyStats, memberPeriod);
   const sorted = [...a.dailyStats].sort((x,y)=>y.date.localeCompare(x.date));
+  // Progression gamifiée : paliers de dépôts (0-3 débutant, 3-10 confirmé, 10-25 expert, 25+ élite)
+  const levels = [
+    {min:0, max:3, name:"Débutant", emoji:"🌱"},
+    {min:3, max:10, name:"Affilié confirmé", emoji:"🚀"},
+    {min:10, max:25, name:"Expert", emoji:"⚡"},
+    {min:25, max:9999, name:"Élite", emoji:"👑"}
+  ];
+  const lvl = levels.find(l=>t.ftd>=l.min && t.ftd<l.max) || levels[levels.length-1];
+  const lvlIdx = levels.indexOf(lvl);
+  const progressPct = Math.min(100, Math.round(((t.ftd-lvl.min)/(lvl.max-lvl.min))*100));
+  const remaining = Math.max(0, lvl.max - t.ftd);
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:6px">${notifButtonHtml(NOTIF_MEMBER_KEY)}</div>
-    <div class="anim" style="margin-bottom:20px"><h1 style="font-size:24px;font-weight:800;margin:0">Tableau de bord</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Aperçu de ton activité</p></div>
-    <div class="card anim" style="padding:20px 22px;margin-bottom:20px">
+    <div class="anim" style="margin-bottom:16px"><h1 style="font-size:24px;font-weight:800;margin:0">Tableau de bord</h1><p class="muted" style="margin:6px 0 0;font-size:14px">Aperçu de ton activité</p></div>
+
+    <div class="level-card anim">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <span style="font-weight:800;font-size:14px">${lvl.emoji} Niveau ${lvlIdx+1} — ${lvl.name}</span>
+        <span style="font-size:12px;color:var(--dim);font-weight:700">${t.ftd} / ${lvl.max===9999?"∞":lvl.max} dépôts</span>
+      </div>
+      <div class="xp-bar"><div class="xp-fill" style="width:${progressPct}%"></div></div>
+      <div class="xp-label"><span>${lvl.max===9999?"Niveau maximum atteint 🎉":`${remaining} dépôt${remaining>1?"s":""} avant le niveau suivant`}</span></div>
+    </div>
+
+    <div class="card anim" style="padding:20px 22px;margin-bottom:16px">
       <p style="font-size:12px;color:var(--dim);margin:0 0 12px;font-weight:600">Tes liens d'affiliation</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${allTrackingLinks(a).length? allTrackingLinks(a).map(l=>`
@@ -1259,21 +1333,23 @@ function memberDashboardHtml(a){
           </div>`).join("") : `<p class="muted" style="font-size:13px;margin:0">Pas encore configuré — contacte ton admin.</p>`}
       </div>
     </div>
+
     <div class="grid-kpi" style="margin-bottom:20px">
-      ${statCard('userplus','Inscriptions', numf(t.signups),0)}
-      ${statCard('trend','Dépôts', numf(t.ftd),60)}
-      ${statCard('dollar','Ta commission', eur(commission),120)}
-      ${statCard('dollar',"Chiffre d'affaires", eur(t.revenue),180)}
+      ${sparkStatCard('sp-mem-clicks','Visites', numf(t.clicks), null, null, 0)}
+      ${sparkStatCard('sp-mem-signups','Inscriptions', numf(t.signups), null, null, 60)}
+      ${sparkStatCard('sp-mem-ftd','Dépôts', numf(t.ftd), null, 'green', 120)}
+      ${sparkStatCard('sp-mem-comm','Ta commission', eur(commission), '#6ee7b7', 'green', 180)}
     </div>
+
     <div class="card anim" style="padding:22px;margin-bottom:20px">
       <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px"><h2 style="font-size:17px;font-weight:700;margin:0">Revenu généré</h2>${periodToggle(memberPeriod,'setMemberPeriod')}</div>
       ${chartData.length? `<div style="height:260px"><canvas id="memberChart"></canvas></div>` : `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:14px">Tes stats apparaîtront ici.</div>`}
     </div>
     <div class="card anim" style="padding:22px">
       <h2 style="font-size:17px;font-weight:700;margin:0 0 16px">Historique</h2>
-      <div style="overflow-x:auto"><table style="min-width:560px">
-        <thead><tr><th>Date</th><th>Inscriptions</th><th>Dépôts</th><th>CA</th><th>Ta commission</th></tr></thead>
-        <tbody>${sorted.map(s=>`<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString('fr-FR')}</td><td>${numf(s.signups)}</td><td>${numf(s.ftd)}</td><td>${eur(s.revenue)}</td><td style="color:#5c9cf8;font-weight:700">${eur(s.ftd*(a.commissionPerFtd||0))}</td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--dim)">Aucune donnée pour le moment.</td></tr>`}</tbody>
+      <div style="overflow-x:auto"><table style="min-width:620px">
+        <thead><tr><th>Date</th><th>Visites</th><th>Inscriptions</th><th>Dépôts</th><th>CA</th><th>Ta commission</th></tr></thead>
+        <tbody>${sorted.map(s=>`<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString('fr-FR')}</td><td>${numf(s.clicks)}</td><td>${numf(s.signups)}</td><td>${numf(s.ftd)}</td><td>${eur(s.revenue)}</td><td style="color:#5c9cf8;font-weight:700">${eur(s.ftd*(a.commissionPerFtd||0))}</td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--dim)">Aucune donnée pour le moment.</td></tr>`}</tbody>
       </table></div>
     </div>`;
 }
@@ -1376,7 +1452,14 @@ function render(){
     else if(VIEW==="settings") content = isChief ? chiefSettingsHtml() : adminSettingsHtml();
     else content = adminOverviewHtml();
     app.innerHTML = shell(nav, activeName, roleLabel, content);
-    if(VIEW==="overview"){ const affs=visibleAffiliates(); const d=groupStats(affs.flatMap(a=>a.dailyStats), adminPeriod); if(d.length) renderAreaChart("adminChart", d); }
+    if(VIEW==="overview"){
+      const affs=visibleAffiliates(); const allStats = affs.flatMap(a=>a.dailyStats);
+      const d=groupStats(allStats, adminPeriod); if(d.length) renderAreaChart("adminChart", d);
+      drawSpark("sp-adm-clicks", cumulativeSeries(allStats,"clicks"), "#5c9cf8");
+      drawSpark("sp-adm-signups", cumulativeSeries(allStats,"signups"), "#ffb84a");
+      drawSpark("sp-adm-ftd", cumulativeSeries(allStats,"ftd"), "#34d399");
+      drawSpark("sp-adm-comm", cumulativeSeries(allStats,"ftd"), "#fbbf24");
+    }
     if(VIEW==="affiliates" && detailId){ const a=findAffiliate(detailId); if(a){ const d=groupStats(a.dailyStats, detailPeriod); if(d.length) renderAreaChart("detailChart", d); } }
     if(VIEW==="messages" && messagesOpenId){ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; }
     return;
@@ -1406,7 +1489,14 @@ function render(){
   else memberContent = memberDashboardHtml(a);
   app.innerHTML = shell(nav, a.name, "Partenaire", memberContent);
   if(VIEW==="messages"){ const t=document.getElementById("msgThreadScroll"); if(t) t.scrollTop=t.scrollHeight; }
-  if(VIEW==="overview"){ const d = groupStats(a.dailyStats, memberPeriod); if(d.length) renderAreaChart("memberChart", d); }
+  if(VIEW==="overview"){
+    const d = groupStats(a.dailyStats, memberPeriod); if(d.length) renderAreaChart("memberChart", d);
+    drawSpark("sp-mem-clicks", cumulativeSeries(a.dailyStats,"clicks"), "#5c9cf8");
+    drawSpark("sp-mem-signups", cumulativeSeries(a.dailyStats,"signups"), "#ffb84a");
+    drawSpark("sp-mem-ftd", cumulativeSeries(a.dailyStats,"ftd"), "#34d399");
+    const commSeries = cumulativeSeries(a.dailyStats,"ftd").map(v=>v*(a.commissionPerFtd||0));
+    drawSpark("sp-mem-comm", commSeries, "#6ee7b7");
+  }
 }
 
 render();

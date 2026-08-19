@@ -1,4 +1,4 @@
-// GET  /api/db  -> renvoie { db } (configuration publique si non authentifié, ou DB complète si x-api-key valide)
+// GET  /api/db  -> renvoie { db } (données publiques filtrées si non authentifié, ou DB complète si x-api-key valide)
 // POST /api/db  -> enregistre la base complète dans Supabase (nécessite x-api-key valide)
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -7,7 +7,6 @@ const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
 
 function sanitizeDbForPublic(db) {
   if (!db || typeof db !== "object") return {};
-  // Exposer uniquement les paramètres publics globaux, AUCUNE donnée privée d'affilié / messages / clés
   return {
     mainTrackingLink: db.mainTrackingLink || "",
     referralPercent: db.referralPercent || 10,
@@ -16,7 +15,27 @@ function sanitizeDbForPublic(db) {
     defaultCommissionPerFtd: db.defaultCommissionPerFtd || 20,
     allowSelfSignup: db.allowSelfSignup !== undefined ? db.allowSelfSignup : true,
     memberLinks: db.memberLinks || [],
-    rewardTiers: db.rewardTiers || []
+    rewardTiers: db.rewardTiers || [],
+    // Répertoire public des affiliés (SANS code d'accès/mot de passe, SANS RIB/IBAN, SANS messages privés)
+    affiliates: Array.isArray(db.affiliates)
+      ? db.affiliates.map(a => ({
+          id: a.id,
+          name: a.name,
+          status: a.status || "active",
+          ownerChiefId: a.ownerChiefId || null,
+          commissionPerFtd: a.commissionPerFtd || 20,
+          dailyStats: a.dailyStats || []
+        }))
+      : [],
+    // Répertoire public des chefs (SANS mot de passe)
+    chiefs: Array.isArray(db.chiefs)
+      ? db.chiefs.map(c => ({
+          id: c.id,
+          name: c.name,
+          recruitPercent: c.recruitPercent || 10,
+          defaultCommissionPerFtd: c.defaultCommissionPerFtd || 20
+        }))
+      : []
   };
 }
 
