@@ -5,7 +5,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 
 const PLANS = [
   {
-    id: "STARTER" as const,
+    id: "STARTER" as const, 
     name: "Starter",
     price: "9€",
     features: ["1 idée active", "Schéma complet + carte mentale", "30 messages IA / mois"],
