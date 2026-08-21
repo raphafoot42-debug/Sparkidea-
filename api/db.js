@@ -1,5 +1,5 @@
 // GET  /api/db  -> renvoie { db } (lecture publique filtrée, complète si x-api-key est fourni)
-// POST /api/db  -> enregistre la base complète dans Supabase (nécessite x-api-key)
+// POST /api/db  -> enregistre la base complète dans Supabase (nécessite x-api-key) 
 //
 // Variables d'environnement à configurer sur Vercel (Settings > Environment Variables) :
 //   SUPABASE_URL          -> ex: https://xxxxxxxxxxxxx.supabase.co
