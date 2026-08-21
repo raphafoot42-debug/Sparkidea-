@@ -5,7 +5,7 @@ import { db } from "./db";
 // Volontairement PAS un simple ratio "quêtes cochées". Un client qui
 // confirme toutes ses quêtes sans jamais déclarer de résultat réel ne doit
 // jamais atteindre 100% — sinon la barre ne veut plus rien dire.
-//
+// 
 // Répartition :
 //   - Effort (quêtes confirmées, toutes pistes confondues) : plafonné à 40%.
 //   - Résultat réel (dernier check-in vs l'objectif chiffré fixé)  : 60%.
