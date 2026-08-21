@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { evaluateFinalGoal } from "@/lib/ai/quest-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   ideaId: z.string(),
   goal: z.string().min(3).max(600),
   targetMetric: z.enum(["clients", "revenue", "audience"]).optional(),
