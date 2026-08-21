@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
+ 
 type Project = { id: string; title: string };
 
 export function ProjectSwitcher({ projects, activeIdeaId }: { projects: Project[]; activeIdeaId: string }) {
