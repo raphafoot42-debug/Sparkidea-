@@ -8,7 +8,7 @@ export function AdminLogoutButton() {
   async function logout() {
     setLoading(true);
     await fetch("/api/admin/logout", { method: "POST" });
-    window.location.replace("/admin/login");
+    window.location.replace("/admin/login"); 
   }
 
   return (
