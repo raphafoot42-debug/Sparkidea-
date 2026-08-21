@@ -8,7 +8,7 @@ import {
   type QaTurn,
 } from "@/lib/ai/schema-generator";
 import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
-import {
+import { 
   DEVICE_COOKIE,
   getOrCreateDeviceId,
   isDeviceLocked,
