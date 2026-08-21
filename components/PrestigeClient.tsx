@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+ 
 type Suggestion = { title: string; pitch: string };
 
 // N'apparaît QUE si le projet est à 100% (vérifié côté serveur avant de
