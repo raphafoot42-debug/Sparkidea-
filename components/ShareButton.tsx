@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from "react"; 
 
 // Bouton "Partager mon analyse" — génère (ou récupère) le lien public en
 // lecture seule via /api/ideas/share, puis le copie dans le presse-papier.
