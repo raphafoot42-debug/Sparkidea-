@@ -11,7 +11,7 @@ export function AnimatedScore({ value }: { value: number }) {
 
   useEffect(() => {
     const duration = 800;
-    const start = performance.now();
+    const start = performance.now(); 
 
     function tick(now: number) {
       const progress = Math.min(1, (now - start) / duration);
