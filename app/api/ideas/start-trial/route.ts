@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 // l'utilisateur est déjà connecté et l'essai est déjà actif depuis
 // l'inscription, donc on enregistre directement le schéma généré avant
 // inscription (mémorisé côté client en sessionStorage) — sans le régénérer,
-// ce qui économise au passage un appel IA.
+// ce qui économise au passage un appel IA. 
 const BodySchema = z.object({
   rawInput: z.string().min(1),
   schemaData: z.unknown(),
