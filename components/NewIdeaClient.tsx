@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function NewIdeaClient() {
+export function NewIdeaClient() { 
   const router = useRouter();
   const [idea, setIdea] = useState("");
   const [loading, setLoading] = useState(false);
