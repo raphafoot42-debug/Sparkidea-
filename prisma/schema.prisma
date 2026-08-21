@@ -1,5 +1,5 @@
 // Schéma de base de données — Spark Idea
-// SQLite en dev pour démarrer vite. Pour la prod, changer "provider" en "postgresql"
+// SQLite en dev pour démarrer vite. Pour la prod, changer "provider" en "postgresql" 
 // et DATABASE_URL vers une vraie base Postgres (Supabase, Neon, Railway, etc.)
 // C'est le seul changement nécessaire pour migrer, Prisma gère le reste.
 
