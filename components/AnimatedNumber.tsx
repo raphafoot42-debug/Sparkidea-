@@ -10,7 +10,7 @@ export function AnimatedNumber({ value }: { value: number }) {
   useEffect(() => { 
     const duration = 700;
     const start = performance.now();
-
+ 
     function tick(now: number) {
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
