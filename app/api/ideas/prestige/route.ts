@@ -8,7 +8,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 // GET : propose 3 objectifs suivants, UNIQUEMENT si le projet est déjà à 100%.
 // Rien n'est réinitialisé nulle part ici — le schéma, l'historique et les
-// quêtes déjà faites restent tels quels, on ajoute juste un nouveau palier.
+// quêtes déjà faites restent tels quels, on ajoute juste un nouveau palier. 
 export async function GET(req: NextRequest) {
   let user;
   try {
