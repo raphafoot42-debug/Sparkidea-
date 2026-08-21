@@ -11,7 +11,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function AnalysePage({
   searchParams,
-}: {
+}: { 
   searchParams: { idea?: string };
 }) {
   const user = await getCurrentUser();
