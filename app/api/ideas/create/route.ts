@@ -9,7 +9,7 @@ import { hasDashboardAccess } from "@/lib/trial";
 // Contrairement à /api/generate (étape gratuite, anonyme, anti-abus par
 // device), cette route sert un utilisateur DÉJÀ connecté et payant qui veut
 // créer un nouveau projet directement depuis son dashboard — pas de détour
-// par l'accueil ni par sessionStorage.
+// par l'accueil ni par sessionStorage. 
 const BodySchema = z.object({
   idea: z.string().min(6, "Décris un peu plus ton idée.").max(500),
 });
