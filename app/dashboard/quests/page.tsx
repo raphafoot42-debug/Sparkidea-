@@ -8,7 +8,7 @@ import { AllQuestsClient } from "@/components/AllQuestsClient";
 import { GoalOnboarding } from "@/components/GoalOnboarding";
 import { GoalStrip } from "@/components/GoalStrip";
 import { ensureQuestBatch } from "@/lib/quests";
-import { computeTechnicalProgress } from "@/lib/progress";
+import { computeTechnicalProgress } from "@/lib/progress"; 
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function QuestsPage({
