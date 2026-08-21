@@ -1,5 +1,5 @@
 import { db } from "./db";
-
+ 
 const LOCK_DURATION_DAYS = 5;
 const DEVICE_COOKIE = "spark_device";
 
