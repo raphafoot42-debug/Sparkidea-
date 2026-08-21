@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { z } from "zod";
-import { verifyAdminSession, hashPassword } from "@/lib/auth";
+import { verifyAdminSession, hashPassword } from "@/lib/auth"; 
 import { db } from "@/lib/db";
 
 const BodySchema = z.object({ userId: z.string() });
