@@ -8,7 +8,7 @@ import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { AnalyseClient } from "@/components/AnalyseClient";
 import { generateProjectAnalysis } from "@/lib/ai/analysis-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
-
+ 
 export default async function AnalysePage({
   searchParams,
 }: {  
