@@ -1,6 +1,6 @@
 // Source unique de vérité pour les 3 forfaits (9€ / 24€ / 74€).
 // Tout le reste du code (API + UI) doit lire ces constantes plutôt que
-// dupliquer des chiffres en dur — sinon les forfaits finissent par
+// dupliquer des chiffres en dur — sinon les forfaits finissent par 
 // diverger entre deux endroits (c'était déjà le cas avant ce fichier).
 export const QUEST_CHAT_MESSAGE_LIMITS = { STARTER: 30, PRO: 50, STUDIO: 150 } as const;
 export type PlanKey = keyof typeof QUEST_CHAT_MESSAGE_LIMITS;
