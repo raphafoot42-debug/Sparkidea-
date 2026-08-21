@@ -6,7 +6,7 @@ import { createSession, verifyPassword } from "@/lib/auth";
 const BodySchema = z.object({
   email: z.string().email("Email invalide."),
   password: z.string().min(1, "Mot de passe requis."),
-});
+}); 
 
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
