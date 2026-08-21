@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode; 
 }) {
   // Thème lu ici (côté serveur) pour éviter le flash "sombre puis clair" au
   // chargement — appliqué directement sur <html> avant le premier rendu.
