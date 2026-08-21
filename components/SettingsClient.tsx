@@ -7,7 +7,7 @@ type Props = {
   blocked: boolean;
   subscriptionStatus: string;
   email: string;
-  theme: "dark" | "light";
+  theme: "dark" | "light"; 
   language: "fr" | "en" | "ja" | "ru";
 };
 
