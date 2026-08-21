@@ -3,7 +3,7 @@
 // Démarre à l'inscription (subscriptionStatus = "TRIAL" + trialStartedAt),
 // se termine automatiquement après 24h OU après TRIAL_MESSAGE_LIMIT messages
 // — le premier des deux déclenche le mur de paiement.
-export const TRIAL_DURATION_MS = 24 * 60 * 60 * 1000;
+export const TRIAL_DURATION_MS = 24 * 60 * 60 * 1000; 
 export const TRIAL_MESSAGE_LIMIT = 15;
 
 type TrialUser = {
