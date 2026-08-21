@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-
+ 
 type Quest = { id: string; title: string; detail: string };
 type Attachment = { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; previewUrl: string };
 type Msg = { role: "user" | "assistant"; text: string; imagePreview?: string };
