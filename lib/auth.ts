@@ -5,7 +5,7 @@ import { db } from "./db";
 
 const SESSION_COOKIE = "spark_session";
 const SESSION_DURATION_DAYS = 30;
-
+ 
 // -----------------------------------------------------------------------
 // Mots de passe : toujours hachés, jamais stockés ni affichés en clair.
 // bcrypt est volontairement lent (c'est voulu, ça protège contre le
