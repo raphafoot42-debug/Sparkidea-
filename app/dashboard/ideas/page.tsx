@@ -11,7 +11,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 export default async function IdeasPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-
+ 
   const ideas = await db.idea.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
