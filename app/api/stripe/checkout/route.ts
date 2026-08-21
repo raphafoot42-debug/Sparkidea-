@@ -10,7 +10,7 @@ const BodySchema = z.object({
   // Optionnel : un utilisateur qui s'inscrit directement (sans passer par
   // l'analyse gratuite de l'accueil) doit pouvoir payer quand même, sans
   // idée en attente — il en créera une depuis /dashboard/new après paiement.
-  pendingIdea: z
+  pendingIdea: z 
     .object({
       rawInput: z.string(),
       schemaData: z.unknown(),
