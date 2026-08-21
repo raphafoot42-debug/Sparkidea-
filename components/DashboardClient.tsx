@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MindMap } from "@/components/MindMap";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
-type Props = {
+type Props = { 
   ideaId: string;
   initialSchema: SchemaResult;
 };
