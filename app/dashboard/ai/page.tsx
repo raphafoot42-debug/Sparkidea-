@@ -1,7 +1,7 @@
 import { hasDashboardAccess } from "@/lib/trial";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"; 
 import { DrawerNav } from "@/components/DrawerNav";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { QuestChatClient } from "@/components/QuestChatClient";
