@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Goal = {
-  id: string;
+  id: string; 
   text: string;
 };
 
