@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { generateQuestBatch, type Track } from "./ai/quest-generator";
-import type { SchemaResult } from "./ai/schema-generator";
+import type { SchemaResult } from "./ai/schema-generator"; 
 
 const TRACKS: Track[] = ["marketing", "technique"];
 
