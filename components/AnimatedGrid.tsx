@@ -14,7 +14,7 @@ export function AnimatedGrid({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return; 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
