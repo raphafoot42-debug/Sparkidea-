@@ -4,7 +4,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 // Dessine le schéma sur un <canvas> natif du navigateur puis déclenche le
 // téléchargement en PNG — aucune librairie externe (pas de html2canvas),
-// juste l'API Canvas 2D déjà disponible partout.
+// juste l'API Canvas 2D déjà disponible partout. 
 export function ExportPngButton({ schema }: { schema: SchemaResult }) {
   function handleExport() {
     const width = 800;
