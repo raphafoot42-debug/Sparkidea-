@@ -6,7 +6,7 @@ import { ensureNextBatchForQuestTrack } from "@/lib/quests";
 
 const BodySchema = z.object({
   questId: z.string(),
-});
+}); 
 
 export async function POST(req: NextRequest) {
   let user;
