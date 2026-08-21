@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 // un ordinateur partagé pourrait détourner le compte.
 const BodySchema = z
   .object({
-    currentPassword: z.string().min(1, "Mot de passe actuel requis."),
+    currentPassword: z.string().min(1, "Mot de passe actuel requis."), 
     newEmail: z.string().email("Email invalide.").optional(),
     newPassword: z.string().min(8, "8 caractères minimum.").optional(),
   })
