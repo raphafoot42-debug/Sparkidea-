@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 
-const TESTIMONIALS = [
+const TESTIMONIALS = [ 
   {
     initials: "CR",
     name: "Camille R.",
