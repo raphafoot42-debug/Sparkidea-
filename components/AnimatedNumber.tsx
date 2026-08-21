@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
 
-  useEffect(() => {
+  useEffect(() => { 
     const duration = 700;
     const start = performance.now();
 
