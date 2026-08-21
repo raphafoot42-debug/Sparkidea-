@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!code || code !== adminCode) {
-    // Délai pour ralentir le bruteforce
+    // Délai pour ralentir le bruteforce 
     await new Promise((r) => setTimeout(r, 600));
     return NextResponse.json({ error: "Code incorrect." }, { status: 401 });
   }
