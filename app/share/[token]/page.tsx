@@ -5,7 +5,7 @@ import { ExportPngButton } from "@/components/ExportPngButton";
 
 // Page PUBLIQUE (pas d'auth) — accessible à quiconque a le lien exact avec
 // le bon token, comme demandé : "un lien de partage en lecture seule".
-// Aucune action possible ici (pas de chat, pas d'édition) : uniquement la
+// Aucune action possible ici (pas de chat, pas d'édition) : uniquement la 
 // consultation du schéma déjà généré.
 export default async function SharePage({ params }: { params: { token: string } }) {
   const idea = await db.idea.findUnique({ where: { shareToken: params.token } });
