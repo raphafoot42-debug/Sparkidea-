@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }); 
 
 // ---------------------------------------------------------------------------
 // LA GRILLE DE CRITÈRES — validée avec Raphaël. C'est le cœur du produit.
