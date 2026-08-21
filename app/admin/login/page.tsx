@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "next/link"; 
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 
 export default function AdminLoginPage() {
