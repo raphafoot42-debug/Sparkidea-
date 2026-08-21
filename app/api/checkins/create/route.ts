@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 const BodySchema = z.object({
   ideaId: z.string(),
   clients: z.number().int().min(0).max(1_000_000_000),
-  revenue: z.number().min(0).max(1_000_000_000),
+  revenue: z.number().min(0).max(1_000_000_000), 
   audience: z.number().int().min(0).max(1_000_000_000),
 });
 
