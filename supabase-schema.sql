@@ -1,5 +1,5 @@
 -- À coller dans Supabase → SQL Editor → New query → Run
-
+ 
 create table if not exists app_db (
   id int primary key default 1,
   data jsonb not null default '{}'::jsonb,
