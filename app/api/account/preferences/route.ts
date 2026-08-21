@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"; 
 
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   theme: z.enum(["dark", "light"]).optional(),
   language: z.enum(["fr", "en", "ja", "ru"]).optional(),
 });
