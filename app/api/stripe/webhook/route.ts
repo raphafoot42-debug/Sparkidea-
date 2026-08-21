@@ -6,7 +6,7 @@ import { toPlanKey } from "@/lib/plan-limits";
 
 // C'est ICI, et seulement ici, que les données deviennent permanentes —
 // comme décidé : jamais au clic "payer" côté client (falsifiable), toujours
-// via la confirmation signée de Stripe.
+// via la confirmation signée de Stripe. 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
