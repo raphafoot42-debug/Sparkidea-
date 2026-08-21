@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { DrawerNav } from "@/components/DrawerNav";
-import { NewIdeaClient } from "@/components/NewIdeaClient";
+import { NewIdeaClient } from "@/components/NewIdeaClient"; 
 
 export default async function NewIdeaPage() {
   const user = await getCurrentUser();
