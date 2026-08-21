@@ -9,7 +9,7 @@ type RawCheckIn = { createdAt: string; clients: number; revenue: number; audienc
 
 const PERIOD_LABELS: Record<Period, string> = {
   day: "Jour",
-  week: "Semaine",
+  week: "Semaine", 
   month: "Mois",
   year: "An",
 };
