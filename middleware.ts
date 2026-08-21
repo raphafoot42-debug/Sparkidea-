@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) { 
   const path = req.nextUrl.pathname;
 
   // --- Routes dashboard (utilisateurs connectés) ---
