@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type Row = {
   id: string;
-  email: string;
+  email: string; 
   plan: string | null;
   subscriptionStatus: string;
   createdAt: string;
