@@ -13,7 +13,7 @@ import { GoalStrip } from "@/components/GoalStrip";
 import { PrestigeClient } from "@/components/PrestigeClient";
 import { TrialBanner } from "@/components/TrialBanner";
 import { ShareButton } from "@/components/ShareButton";
-import type { SchemaResult } from "@/lib/ai/schema-generator";
+import type { SchemaResult } from "@/lib/ai/schema-generator"; 
 
 export default async function DashboardPage({
   searchParams,
