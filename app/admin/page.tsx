@@ -3,7 +3,7 @@ import { verifyAdminSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { AdminTable } from "./AdminTable";
-import { AdminLogoutButton } from "./AdminLogoutButton";
+import { AdminLogoutButton } from "./AdminLogoutButton"; 
 
 // Prix affiché par forfait — pour le calcul du MRR admin uniquement (les
 // vrais montants facturés restent gérés par Stripe, ceci est indicatif).
