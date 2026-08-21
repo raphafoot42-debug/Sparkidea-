@@ -1,5 +1,5 @@
 // GET/POST /api/postback -> reçoit les postbacks du réseau d'affiliation
-// (register, ftd, deposit, cpa, ngr) et met à jour postback_daily_stats
+// (register, ftd, deposit, cpa, ngr) et met à jour postback_daily_stats 
 // dans Supabase. Nécessite ?key=... = POSTBACK_API_KEY (variable d'env Vercel).
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
