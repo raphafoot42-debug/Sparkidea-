@@ -3,7 +3,7 @@ import type { SchemaResult } from "./schema-generator";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Paragraphe court généré après chaque nouveau check-in (ou au chargement de
+// Paragraphe court généré après chaque nouveau check-in (ou au chargement de 
 // la page Analyse) : synthétise où en est le projet, en clair, sans jargon.
 export async function generateProjectAnalysis(
   schema: SchemaResult,
