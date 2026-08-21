@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 
 export async function POST() {
   let user;
-  try {
+  try { 
     user = await requireUser();
   } catch {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });
