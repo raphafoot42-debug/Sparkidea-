@@ -16,7 +16,7 @@ const BodySchema = z.object({
       mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
     })
     .optional(),
-});
+}); 
 
 export async function POST(req: NextRequest) {
   let user;
