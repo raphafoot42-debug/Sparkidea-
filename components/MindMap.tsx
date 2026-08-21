@@ -6,7 +6,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 type Props = {
   schema: SchemaResult;
   onSchemaChange?: (schema: SchemaResult) => void;
-  // Si présent : chat authentifié, isolé sur CE projet précis (isolation
+  // Si présent : chat authentifié, isolé sur CE projet précis (isolation 
   // stricte gérée côté serveur dans /api/chat).
   ideaId?: string;
   // Sinon : chat gratuit, sans sauvegarde.
