@@ -6,7 +6,7 @@ import { useState } from "react";
 
 type QuestItem = {
   id: string;
-  title: string;
+  title: string; 
   detail: string;
   track: "marketing" | "technique";
   status: "PENDING" | "DONE";
