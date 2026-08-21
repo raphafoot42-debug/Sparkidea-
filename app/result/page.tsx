@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MindMap } from "@/components/MindMap";
 import { AnimatedScore } from "@/components/AnimatedScore";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
-
+ 
 export default function ResultPage() {
   const router = useRouter();
   const [schema, setSchema] = useState<SchemaResult | null>(null);
