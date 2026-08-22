@@ -8,7 +8,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null); 
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,8 +29,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Un client déjà payant revient directement sur son dashboard — pas de
-    // détour par les forfaits ou l'accueil, comme décidé.
     router.push(data.isAdmin ? "/admin" : "/dashboard");
   }
 
@@ -80,12 +78,6 @@ export default function LoginPage() {
           Mot de passe oublié ?{" "}
           <a href="tel:+33780112707" style={{ color: "var(--line)" }}>
             Contactez le responsable BRES
-          </a>
-        </div>
-        <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginTop: 14 }}>
-          Pas encore de compte ?{" "}
-          <a href="/signup" style={{ color: "var(--line)" }}>
-            S&apos;inscrire
           </a>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
