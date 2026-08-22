@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { resend } from "@/lib/email/resend";
 import { buildDailyDigestEmail } from "@/lib/email/daily-digest";
 
+export const dynamic = "force-dynamic";
+
 // Appelé une fois par jour par le cron Vercel (voir vercel.json).
 // Si CRON_SECRET est défini dans Vercel, la route vérifie le header envoyé
 // automatiquement par Vercel Cron. Si CRON_SECRET n'est pas défini, la
