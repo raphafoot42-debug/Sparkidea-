@@ -1,103 +1,71 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { verifyAdminSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
+import { AdminTable } from "./AdminTable";
+import { AdminLogoutButton } from "./AdminLogoutButton";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const PLAN_PRICE_EUR: Record<string, number> = { STARTER: 19, PRO: 49, STUDIO: 97 };
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+export default async function AdminPage() {
+  if (!verifyAdminSession()) redirect("/admin/login");
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+  const users = await db.user.findMany({
+    where: { plan: { not: null } },
+    orderBy: { createdAt: "desc" },
+    include: { ideas: { select: { id: true } } },
+  });
 
-    if (!res.ok) {
-      setError(data.error ?? "Une erreur est survenue.");
-      setLoading(false);
-      return;
-    }
+  const revenue = users.reduce((sum: number, u) => {
+    if (u.subscriptionStatus !== "ACTIVE") return sum;
+    return sum + (u.plan ? PLAN_PRICE_EUR[u.plan] ?? 0 : 0);
+  }, 0);
 
-    // Un client déjà payant revient directement sur son dashboard — pas de
-    // détour par les forfaits ou l'accueil, comme décidé.
-    router.push(data.isAdmin ? "/admin" : "/dashboard");
-  }
+  const starterCount = users.filter((u) => u.plan === "STARTER").length;
+  const proCount = users.filter((u) => u.plan === "PRO").length;
+  const studioCount = users.filter((u) => u.plan === "STUDIO").length;
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ position: "relative", minHeight: "100vh" }}>
       <AnimatedGrid intensity="discrete" />
-      <form
-        onSubmit={handleSubmit}
-        className="panel"
-        style={{ position: "relative", zIndex: 2, width: 340, padding: "30px 26px" }}
-      >
-        <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14 }}>◆ Spark Idea</div>
-        <h1 style={{ textAlign: "center", fontSize: 17, fontWeight: 600, margin: "12px 0 4px" }}>
-          Connexion
-        </h1>
-
-        <div style={{ marginBottom: 13, marginTop: 20 }}>
-          <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="field-input"
-            placeholder="toi@exemple.com"
-          />
-        </div>
-        <div style={{ marginBottom: 13 }}>
-          <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Mot de passe</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field-input"
-            placeholder="••••••••"
-          />
+      <div style={{ position: "relative", zIndex: 2, padding: "40px 44px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 22 }}>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 600 }}>Utilisateurs</h1>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 5 }}>
+              Le mot de passe n&apos;est jamais stocké en clair, ni visible ici
+            </p>
+          </div>
+          <AdminLogoutButton />
         </div>
 
-        {error && <div className="error-text">{error}</div>}
-
-        <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", marginTop: 8 }}>
-          {loading ? "..." : "Se connecter"}
-        </button>
-
-        <div style={{ textAlign: "center", fontSize: 11.5, color: "var(--muted)", marginTop: 12 }}>
-          Mot de passe oublié ?{" "}
-          <a href="tel:+33780112707" style={{ color: "var(--line)" }}>
-            Contactez le responsable BRES
-          </a>
+        <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+          <Stat value={users.length} label="Utilisateurs payants" />
+          <Stat value={`${revenue} €`} label="Revenu mensuel (MRR)" />
+          <Stat value={`${starterCount} / ${proCount} / ${studioCount}`} label="Starter / Builder / Visionary" />
         </div>
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          
-            href="/"
-            style={{
-              fontSize: 12,
-              color: "var(--muted)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              textDecoration: "none",
-            }}
-          >
-            ← Retour à l'accueil
-          </a>
-        </div>
-      </form>
+
+        <AdminTable
+          users={users.map((u) => ({
+            id: u.id,
+            email: u.email,
+            plan: u.plan,
+            subscriptionStatus: u.subscriptionStatus,
+            createdAt: u.createdAt.toISOString(),
+            lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
+            ideasCount: u.ideas.length,
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div className="panel" style={{ padding: "14px 18px", minWidth: 150 }}>
+      <div style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{label}</div>
     </div>
   );
 }
