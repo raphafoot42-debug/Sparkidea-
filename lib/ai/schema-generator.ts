@@ -52,9 +52,6 @@ const NodeSchema = z.object({
   type: z.enum(["todo", "risk", "win"]),
   label: z.string().max(80),
   comment: z.string().max(400),
-  // Contenu du panneau "Voir plus" : explication détaillée, méthodes et
-  // étapes concrètes pour ce point précis. Plus long que "comment", qui
-  // reste la version courte affichée directement sur le schéma.
   detail: z.string().max(1200),
 });
 
@@ -73,20 +70,12 @@ const SchemaResultSchema = z.object({
 
 export type SchemaResult = z.infer<typeof SchemaResultSchema>;
 
-// ---------------------------------------------------------------------------
-// Parsing tolérant : même si le prompt interdit les balises markdown, il
-// arrive que le modèle en ajoute quand même (```json ... ```) ou laisse un
-// espace/texte avant ou après le JSON. On nettoie avant de parser plutôt que
-// de faire planter toute l'analyse pour un détail cosmétique.
-// ---------------------------------------------------------------------------
 function extractJson(raw: string): string {
   let text = raw.trim();
-  // Retire les balises ```json ... ``` ou ``` ... ``` si présentes
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenceMatch) {
     text = fenceMatch[1].trim();
   }
-  // Si du texte traîne avant/après l'objet JSON, on garde juste { ... }
   const firstBrace = text.indexOf("{");
   const lastBrace = text.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -95,12 +84,6 @@ function extractJson(raw: string): string {
   return text;
 }
 
-// ---------------------------------------------------------------------------
-// Quelques exemples déjà analysés à la main, donnés à l'IA en référence
-// (few-shot) pour calibrer son niveau de précision et son ton — plutôt que
-// de la laisser improviser un style à chaque fois.
-// À enrichir avec de vrais exemples validés par Raphaël avant la mise en prod.
-// ---------------------------------------------------------------------------
 const FEW_SHOT_EXAMPLE = `
 Exemple d'idée : "Une appli mobile qui aide les artisans à faire leurs devis en 2 minutes depuis le chantier."
 
@@ -119,7 +102,7 @@ Exemple d'analyse attendue (format et niveau de précision à reproduire) :
   "nodes": [
     { "id": "n1", "type": "todo", "label": "Construire l'app mobile (devis en 2 min)", "comment": "Première brique : commence par un seul type de devis, pas tous les cas dès le départ.", "detail": "Étapes concrètes : 1) Choisis UN seul type de devis fréquent (ex: pose de placo) et fais uniquement celui-là en V1. 2) Utilise un framework mobile rapide (Flutter ou React Native) pour sortir un prototype en 2-3 semaines. 3) Le formulaire doit tenir en 4-5 champs max (surface, matériaux, main d'œuvre, marge) — chaque champ en trop fait fuir un artisan sur le chantier. 4) Génère un PDF propre en un clic, envoyable par SMS ou mail direct depuis l'app. 5) Teste avec 3 artisans réels avant d'ajouter le moindre autre type de devis." },
     { "id": "n2", "type": "todo", "label": "Trouver 10 premiers artisans testeurs", "comment": "Vise des groupes Facebook ou forums de métier, c'est là que ta cible discute déjà de ce problème.", "detail": "Méthodes concrètes : 1) Rejoins 5-10 groupes Facebook d'artisans (bâtiment, plomberie, électricité) et observe une semaine avant de poster. 2) Poste un message honnête : tu construis un outil pour ce problème précis, tu cherches des retours, pas des ventes. 3) Propose l'accès gratuit à vie aux 10 premiers en échange de retours réguliers. 4) Alternative : contacte directement des artisans via leur fiche Google (avis, téléphone) dans ta ville, l'approche en personne convertit mieux qu'en ligne pour ce public. 5) Un appel de 15 min avec chacun vaut plus que 50 réponses à un formulaire." },
-    { "id": "n3", "type": "risk", "label": "Concurrence déjà installée", "comment": "Le risque n'est pas leur existence, c'est qu'ils sont plus complets — reste focalisé sur ta niche mobile.", "detail": "Comment gérer ce risque concrètement : 1) Ne cherche jamais à égaler leur nombre de fonctionnalités, c'est un piège qui te ralentit sans te différencier. 2) Positionne-toi explicitement sur \\"mobile, sur le chantier, en 2 minutes\\" dans toute ta communication — c'est ce qu'ils ne font pas bien. 3) Regarde leurs avis 1-2 étoiles (Trustpilot, Google) : les plaintes récurrentes sont tes opportunités de différenciation direktes. 4) Si un artisan te dit \\"j'utilise déjà X\\", demande-lui ce qui l'embête avec X plutôt que d'argumenter — c'est ton meilleur insight produit." },
+    { "id": "n3", "type": "risk", "label": "Concurrence déjà installée", "comment": "Le risque n'est pas leur existence, c'est qu'ils sont plus complets — reste focalisé sur ta niche mobile.", "detail": "Comment gérer ce risque concrètement : 1) Ne cherche jamais à égaler leur nombre de fonctionnalités, c'est un piège qui te ralentit sans te différencier. 2) Positionne-toi explicitement sur \\"mobile, sur le chantier, en 2 minutes\\" dans toute ta communication — c'est ce qu'ils ne font pas bien. 3) Regarde leurs avis 1-2 étoiles (Trustpilot, Google) : les plaintes récurrentes sont tes opportunités de différenciation directes. 4) Si un artisan te dit \\"j'utilise déjà X\\", demande-lui ce qui l'embête avec X plutôt que d'argumenter — c'est ton meilleur insight produit." },
     { "id": "n4", "type": "risk", "label": "Devis = engagement légal, confiance à construire", "comment": "Ajoute une mention claire de conformité dès la page d'accueil pour rassurer.", "detail": "Points à traiter concrètement : 1) Ajoute une mention visible \\"devis conforme aux mentions légales obligatoires (bâtiment)\\" sur la page d'accueil et dans le PDF généré. 2) Vérifie les mentions obligatoires pour un devis dans le secteur bâtiment (durée de validité, TVA, assurance décennale) et intègre-les par défaut dans le template. 3) Précise clairement que l'app aide à générer le document mais que l'artisan reste responsable de son contenu final — évite toute ambiguïté sur qui est engagé légalement. 4) Un badge \\"vos données restent privées\\" rassure aussi, ce public est méfiant du cloud par défaut." },
     { "id": "n5", "type": "win", "label": "Définir le prix de l'abonnement", "comment": "Regarde ce que les artisans payent déjà pour un logiciel de facturation classique pour te positionner.", "detail": "Méthode concrète pour fixer le prix : 1) Recense 3-4 concurrents directs (Obat, Facture.net, Sinao) et note leur prix mensuel de base — sers-t'en comme ancrage, pas comme copie. 2) Positionne-toi légèrement en dessous au lancement (ex: 12-15€/mois) pour compenser le fait que tu es nouveau et moins complet. 3) Prévois un palier gratuit limité (ex: 3 devis/mois) pour lever la friction à l'essai, plutôt qu'un essai limité dans le temps. 4) Augmente le prix progressivement une fois que tu as des retours positifs solides (avis, bouche-à-oreille) — ne fige pas le prix trop tôt." }
   ]
@@ -152,18 +135,9 @@ ${FEW_SHOT_EXAMPLE}
 Réponds maintenant pour la nouvelle idée fournie, en respectant exactement ce format.`;
 }
 
-// ---------------------------------------------------------------------------
-// Étape de clarification AVANT le schéma final (décidé avec Raphaël : l'IA
-// pose ses questions d'abord, le schéma complet n'arrive qu'une fois qu'elle
-// a assez d'infos — pas de "brouillon" instantané suivi de questions après).
-// ---------------------------------------------------------------------------
 export type QaTurn = { question: string; answer: string };
 
 import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
-
-// Plafond dur côté code (pas juste une consigne au modèle) : au-delà de ce
-// nombre de questions, on force la génération du schéma final quoi qu'il
-// arrive — évite une conversation gratuite illimitée avant inscription.
 export { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
 
 const ClarifyResultSchema = z.union([
@@ -171,12 +145,6 @@ const ClarifyResultSchema = z.union([
   z.object({ done: z.literal(true) }),
 ]);
 
-// ---------------------------------------------------------------------------
-// Contrôle qualité des réponses pendant les questions de clarification —
-// décidé avec Raphaël : une réponse pas claire/vide/hors-sujet est refusée
-// avec une explication, pour garantir un schéma (et donc des quêtes) 100%
-// propres en sortie, plutôt que de laisser passer n'importe quoi.
-// ---------------------------------------------------------------------------
 const ClarityResultSchema = z.union([
   z.object({ clear: z.literal(true) }),
   z.object({ clear: z.literal(false), reason: z.string().max(150) }),
@@ -186,8 +154,6 @@ export async function checkAnswerClarity(
   question: string,
   answer: string
 ): Promise<{ clear: boolean; reason?: string }> {
-  // Filtre rapide côté code avant même d'appeler l'IA : évite un appel pour
-  // une réponse manifestement vide.
   if (answer.trim().length < 3) {
     return { clear: false, reason: "Ta réponse est trop courte, développe un peu." };
   }
@@ -212,8 +178,6 @@ Sois raisonnable : n'exige pas un roman, juste une info réelle et sur le sujet.
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : en cas de doute technique, on laisse passer plutôt
-    // que de bloquer injustement l'utilisateur.
     return { clear: true };
   }
 
@@ -249,7 +213,7 @@ RÈGLES :
 4. Réponds UNIQUEMENT en JSON valide, sans texte avant/après, sans balises markdown.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-6",
     max_tokens: 300,
     system,
     messages: [{ role: "user", content: "Décide et réponds au format demandé." }],
@@ -257,8 +221,6 @@ RÈGLES :
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : si l'IA ne répond rien d'exploitable, on force la
-    // génération plutôt que de bloquer l'utilisateur.
     return { done: true };
   }
 
@@ -271,14 +233,6 @@ RÈGLES :
   }
 }
 
-// ---------------------------------------------------------------------------
-// Verdict personnalisé et honnête, affiché sur /result juste après le
-// schéma, avant même l'inscription (décidé avec Raphaël) : l'IA se
-// prononce honnêtement sur CE projet précis à partir des vraies réponses
-// données pendant les questions de clarification — jamais de promesse de
-// résultat/gain, dit franchement si le potentiel est limité, et propose une
-// piste alternative cohérente avec le profil de l'utilisateur.
-// ---------------------------------------------------------------------------
 export async function generateVerdict(schema: SchemaResult, qaHistory: QaTurn[]): Promise<string> {
   const answersText =
     qaHistory.length === 0
@@ -305,7 +259,7 @@ Rédige un verdict honnête et personnalisé (120 à 180 mots, texte brut, pas d
 5. Reste factuel et direct du début à la fin, jamais dans le blabla marketing ni dans la promesse commerciale.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-6",
     max_tokens: 500,
     system,
     messages: [{ role: "user", content: "Rédige le verdict maintenant." }],
@@ -313,8 +267,6 @@ Rédige un verdict honnête et personnalisé (120 à 180 mots, texte brut, pas d
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : le verdict est un bonus d'affichage, pas bloquant —
-    // s'il échoue, on ne casse pas le parcours d'inscription pour autant.
     return "";
   }
   return textBlock.text.trim();
@@ -322,7 +274,7 @@ Rédige un verdict honnête et personnalisé (120 à 180 mots, texte brut, pas d
 
 export async function generateSchema(ideaText: string): Promise<SchemaResult> {
   const message = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-6",
     max_tokens: 4000,
     system: buildSystemPrompt(),
     messages: [{ role: "user", content: ideaText }],
@@ -337,8 +289,6 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
   try {
     parsed = JSON.parse(extractJson(textBlock.text));
   } catch (parseErr) {
-    // Log complet du texte brut reçu — indispensable pour comprendre en prod
-    // pourquoi le JSON était invalide (visible dans les logs Vercel).
     console.error(
       "[generateSchema] JSON.parse a échoué. Texte brut reçu de Claude :",
       textBlock.text,
@@ -350,7 +300,6 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
 
   const result = SchemaResultSchema.safeParse(parsed);
   if (!result.success) {
-    // Log utile pour comprendre pourquoi Claude a dévié du format attendu.
     console.error(
       "[generateSchema] Schéma Zod invalide :",
       JSON.stringify(result.error.flatten()),
@@ -363,11 +312,6 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
   return result.data;
 }
 
-// ---------------------------------------------------------------------------
-// Deuxième fonction : répondre à un message du chat, en tenant compte du
-// schéma déjà généré pour CE projet précis (isolation entre projets — voir
-// la route API qui appelle cette fonction avec le bon ideaId).
-// ---------------------------------------------------------------------------
 export async function answerChatMessage(
   currentSchema: SchemaResult,
   userMessage: string
@@ -384,7 +328,7 @@ RÈGLES :
 - Réponds en JSON strict : { "reply": "...", "newNode": {...} } — "newNode" est optionnel, ne l'inclus que si un point doit vraiment être ajouté au schéma.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-6",
     max_tokens: 600,
     system,
     messages: [{ role: "user", content: userMessage }],
@@ -402,8 +346,6 @@ RÈGLES :
       newNode: parsed.newNode ? NodeSchema.parse(parsed.newNode) : undefined,
     };
   } catch (err) {
-    // Filet de sécurité : si jamais le JSON est mal formé, on renvoie au moins
-    // le texte brut plutôt que de faire planter la conversation.
     console.error("[answerChatMessage] JSON invalide, fallback texte brut :", textBlock.text, err);
     return { reply: textBlock.text };
   }
