@@ -204,7 +204,7 @@ Réponds UNIQUEMENT en JSON, sans texte avant/après :
 Sois raisonnable : n'exige pas un roman, juste une info réelle et sur le sujet.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-6",
     max_tokens: 150,
     system,
     messages: [{ role: "user", content: "Juge et réponds au format demandé." }],
