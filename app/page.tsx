@@ -471,7 +471,7 @@ export default function HomePage() {
           className="btn-primary"
           style={{ marginTop: 30, textDecoration: "none", display: "inline-block" }}
         >
-          Devenir affilié →
+          Contactez-nous →
         </a>
 
         <div style={{ marginTop: 30, fontSize: 12.5, color: "var(--muted)" }}>
