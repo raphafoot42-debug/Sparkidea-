@@ -465,7 +465,7 @@ export default function HomePage() {
         </div>
 
         <a
-          href="https://spark-idea-affiliation.vercel.app/"
+          href="https://t.me/Raphael42r"
           target="_blank"
           rel="noopener noreferrer"
           className="btn-primary"
