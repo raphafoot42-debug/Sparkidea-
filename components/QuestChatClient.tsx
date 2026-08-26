@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
  
 type Quest = { id: string; title: string; detail: string };
 type Attachment = { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; previewUrl: string };
@@ -17,8 +17,6 @@ export function QuestChatClient({
   initialQuestId?: string;
   quota: { used: number; limit: number };
 }) {
-  // Si on arrive depuis "Demander à l'IA" sur une quête précise, on la
-  // présélectionne directement — sinon on retombe sur la première comme avant.
   const preselected = initialQuestId && quests.some((q) => q.id === initialQuestId) ? initialQuestId : quests[0]?.id ?? "";
   const [questId, setQuestId] = useState(preselected);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -31,6 +29,54 @@ export function QuestChatClient({
   const [attachWarning, setAttachWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ---------------------------------------------------------------------
+  // Fenêtre flottante déplaçable — position libre dans le dashboard
+  // (décor "canvas infini" demandé par Raphaël). Position par défaut :
+  // centrée à droite de l'écran. On mémorise juste x/y en state, la
+  // poignée en haut de la carte déclenche le déplacement au pointer.
+  // ---------------------------------------------------------------------
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Position initiale : centrée verticalement, calée à droite — seulement
+    // une fois le composant monté côté client (évite tout souci SSR avec
+    // window non défini).
+    const w = 480;
+    setPos({
+      x: Math.max(24, window.innerWidth - w - 60),
+      y: Math.max(24, window.innerHeight / 2 - 220),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!dragging) return;
+    function onMove(e: PointerEvent) {
+      setPos({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y,
+      });
+    }
+    function onUp() {
+      setDragging(false);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [dragging]);
+
+  function onHandlePointerDown(e: React.PointerEvent) {
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    setDragging(true);
+  }
+
   const activeQuest = quests.find((q) => q.id === questId);
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
@@ -40,9 +86,6 @@ export function QuestChatClient({
     setAttachWarning(null);
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      // Vidéos et autres fichiers : l'IA (Claude) ne "voit" que des images
-      // pour l'instant — pas de compréhension vidéo native. On le dit
-      // clairement plutôt que de laisser croire que ça marche.
       setAttachWarning("Seules les photos sont analysées par l'IA pour l'instant — vidéos et autres fichiers pas encore supportés.");
       return;
     }
@@ -117,147 +160,179 @@ export function QuestChatClient({
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: 480 }}>
-      <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Aide IA</h1>
-      <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 6 }}>
-        Pour quand une quête reste floue même après &quot;Voir plus&quot;. Quota séparé du chat sur le schéma.
-      </p>
-      <p style={{ fontSize: 11.5, color: quota.used >= quota.limit ? "var(--danger)" : "var(--muted)", marginBottom: 18 }}>
-        {quota.used} / {quota.limit} messages utilisés ce mois-ci
-      </p>
-
-      <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-        Sur quelle quête tu bloques ?
-      </label>
-      <select
-        value={questId}
-        onChange={(e) => {
-          setQuestId(e.target.value);
-          setMessages([]);
+    <div
+      ref={cardRef}
+      className="panel"
+      style={{
+        position: "fixed",
+        left: pos.x,
+        top: pos.y,
+        width: 480,
+        maxWidth: "calc(100vw - 32px)",
+        zIndex: 20,
+        padding: 0,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+        cursor: dragging ? "grabbing" : "default",
+        userSelect: dragging ? "none" : "auto",
+      }}
+    >
+      {/* Poignée de déplacement */}
+      <div
+        onPointerDown={onHandlePointerDown}
+        style={{
+          padding: "10px 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "grab",
+          userSelect: "none",
         }}
-        className="field-input"
-        style={{ marginBottom: 16 }}
       >
-        {quests.map((q) => (
-          <option key={q.id} value={q.id}>
-            {q.title}
-          </option>
-        ))}
-      </select>
-
-      <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 360, overflowY: "auto" }}>
-        {messages.length === 0 && (
-          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
-            Dis-moi ce qui bloque sur « {activeQuest?.title} » et je t&apos;explique autrement.
-          </p>
-        )}
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              marginBottom: 10,
-              textAlign: m.role === "user" ? "right" : "left",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-block",
-                padding: "8px 12px",
-                borderRadius: 10,
-                fontSize: 13,
-                lineHeight: 1.5,
-                maxWidth: "85%",
-                background: m.role === "user" ? "rgba(34,211,238,0.15)" : "var(--surface-subtle)",
-              }}
-            >
-              {m.imagePreview && (
-                <img
-                  src={m.imagePreview}
-                  alt="Pièce jointe"
-                  style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.text ? 6 : 0, display: "block" }}
-                />
-              )}
-              {m.text}
-            </span>
-          </div>
-        ))}
+        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>⠿⠿ Aide IA</span>
+        <span style={{ fontSize: 10, color: "var(--muted)" }}>
+          {quota.used} / {quota.limit}
+        </span>
       </div>
 
-      {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
-      {attachWarning && (
-        <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 10 }}>{attachWarning}</div>
-      )}
+      <div style={{ padding: 20 }}>
+        <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+          Pour quand une quête reste floue même après &quot;Voir plus&quot;. Quota séparé du chat sur le schéma.
+        </p>
 
-      {attachment && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <img src={attachment.previewUrl} alt="Aperçu" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6 }} />
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>Photo prête à envoyer</span>
-          <button
-            onClick={() => setAttachment(null)}
-            style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 12 }}
-          >
-            Retirer
-          </button>
-        </div>
-      )}
+        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
+          Sur quelle quête tu bloques ?
+        </label>
+        <select
+          value={questId}
+          onChange={(e) => {
+            setQuestId(e.target.value);
+            setMessages([]);
+          }}
+          className="field-input"
+          style={{ marginBottom: 16 }}
+        >
+          {quests.map((q) => (
+            <option key={q.id} value={q.id}>
+              {q.title}
+            </option>
+          ))}
+        </select>
 
-      <div style={{ display: "flex", gap: 8, position: "relative" }}>
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setAttachMenuOpen((v) => !v)}
-            className="btn-secondary"
-            aria-label="Joindre"
-            style={{ padding: "0 12px", fontSize: 16 }}
-          >
-            +
-          </button>
-          {attachMenuOpen && (
+        <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
+          {messages.length === 0 && (
+            <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
+              Dis-moi ce qui bloque sur « {activeQuest?.title} » et je t&apos;explique autrement.
+            </p>
+          )}
+          {messages.map((m, i) => (
             <div
-              className="panel"
+              key={i}
               style={{
-                position: "absolute",
-                bottom: "calc(100% + 6px)",
-                left: 0,
-                zIndex: 10,
-                padding: 6,
-                display: "flex",
-                flexDirection: "column",
-                minWidth: 170,
+                marginBottom: 10,
+                textAlign: m.role === "user" ? "right" : "left",
               }}
             >
-              <button
-                onClick={() => {
-                  fileInputRef.current?.click();
-                  setAttachMenuOpen(false);
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  maxWidth: "85%",
+                  background: m.role === "user" ? "rgba(34,211,238,0.15)" : "var(--surface-subtle)",
                 }}
-                style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
               >
-                📷 Photo / capture d&apos;écran
-              </button>
-              <button
-                onClick={() => {
-                  toggleVoice();
-                  setAttachMenuOpen(false);
-                }}
-                style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
-              >
-                🎤 Parler
-              </button>
+                {m.imagePreview && (
+                  <img
+                    src={m.imagePreview}
+                    alt="Pièce jointe"
+                    style={{ maxWidth: "100%", borderRadius: 8, marginBottom: m.text ? 6 : 0, display: "block" }}
+                  />
+                )}
+                {m.text}
+              </span>
             </div>
-          )}
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={onFileChosen} style={{ display: "none" }} />
+          ))}
         </div>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          className="field-input"
-          placeholder={recording ? "Je t'écoute..." : "Explique ce qui bloque..."}
-          style={{ flex: 1 }}
-        />
-        <button onClick={send} disabled={busy} className="btn-primary">
-          {busy ? "..." : "Envoyer"}
-        </button>
+
+        {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
+        {attachWarning && (
+          <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 10 }}>{attachWarning}</div>
+        )}
+
+        {attachment && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <img src={attachment.previewUrl} alt="Aperçu" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6 }} />
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>Photo prête à envoyer</span>
+            <button
+              onClick={() => setAttachment(null)}
+              style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 12 }}
+            >
+              Retirer
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, position: "relative" }}>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setAttachMenuOpen((v) => !v)}
+              className="btn-secondary"
+              aria-label="Joindre"
+              style={{ padding: "0 12px", fontSize: 16 }}
+            >
+              +
+            </button>
+            {attachMenuOpen && (
+              <div
+                className="panel"
+                style={{
+                  position: "absolute",
+                  bottom: "calc(100% + 6px)",
+                  left: 0,
+                  zIndex: 10,
+                  padding: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                  minWidth: 170,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    fileInputRef.current?.click();
+                    setAttachMenuOpen(false);
+                  }}
+                  style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
+                >
+                  📷 Photo / capture d&apos;écran
+                </button>
+                <button
+                  onClick={() => {
+                    toggleVoice();
+                    setAttachMenuOpen(false);
+                  }}
+                  style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
+                >
+                  🎤 Parler
+                </button>
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={onFileChosen} style={{ display: "none" }} />
+          </div>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            className="field-input"
+            placeholder={recording ? "Je t'écoute..." : "Explique ce qui bloque..."}
+            style={{ flex: 1 }}
+          />
+          <button onClick={send} disabled={busy} className="btn-primary">
+            {busy ? "..." : "Envoyer"}
+          </button>
+        </div>
       </div>
     </div>
   );
