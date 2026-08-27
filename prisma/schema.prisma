@@ -1,0 +1,221 @@
+// Schéma de base de données — Spark Idea
+// SQLite en dev pour démarrer vite. Pour la prod, changer "provider" en "postgresql"
+// et DATABASE_URL vers une vraie base Postgres (Supabase, Neon, Railway, etc.)
+// C'est le seul changement nécessaire pour migrer, Prisma gère le reste.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Connexion "pooler" (pgbouncer, port 6543) pour l'appli en serverless —
+  // évite l'épuisement des connexions Supabase qui causait les chargements
+  // infinis / erreurs intermittentes. directUrl (port 5432, connexion
+  // directe) sert uniquement aux migrations, qui ne passent pas par pgbouncer.
+  directUrl = env("DIRECT_URL")
+}
+
+// SQLite ne supporte pas les enums natifs Prisma : on utilise des String
+// avec les valeurs autorisées documentées en commentaire, validées côté appli.
+// Plan               : "STARTER" (9€) | "PRO" (24€) | "STUDIO" (74€)
+// SubscriptionStatus : "ACTIVE" | "TRIAL" | "CANCELED" | "NONE"
+// "TRIAL" = essai gratuit 24h après inscription, avant tout paiement — voir lib/trial.ts
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  isAdmin           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  lastLoginAt       DateTime?
+
+  // Facturation / Stripe
+  stripeCustomerId       String?             @unique
+  stripeSubscriptionId   String?             @unique
+  plan                   String?             // "STARTER" | "PRO"
+  subscriptionStatus     String              @default("NONE") // "ACTIVE" | "TRIAL" | "CANCELED" | "NONE"
+
+  // Essai gratuit 24h (voir lib/trial.ts) : démarre à l'inscription, avant
+  // tout paiement. trialMessagesUsed plafonne le coût IA en cas d'abus.
+  trialStartedAt         DateTime?
+  trialMessagesUsed      Int                 @default(0)
+
+  // Adresse de facturation (optionnelle)
+  billingAddress    String?
+
+  // Préférences d'affichage
+  theme             String              @default("dark")   // "dark" | "light"
+  language          String              @default("fr")     // "fr" | "en" | "ja" | "ru"
+
+  ideas             Idea[]
+  messages          UsageLog[]
+
+  @@index([email])
+}
+
+// Une "Idea" = un projet distinct dans "Mes idées".
+// Chaque idée a son propre schéma (stocké en JSON) et son propre historique.
+// C'est cette séparation par ID qui garantit qu'un projet n'en touche jamais un autre.
+model Idea {
+  id            String   @id @default(cuid())
+  userId        String?  // null tant que l'idée n'est pas rattachée à un compte (étape gratuite)
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String   // nom court généré ou choisi (ex: "DevisRapide")
+  rawInput      String   // le texte original tapé par l'utilisateur
+
+  // Le schéma complet (nœuds, positions, commentaires IA) — un blob JSON.
+  // Simple à faire évoluer sans migration à chaque ajustement du format.
+  schemaData    String   // JSON stringifié : { nodes: [...], criteria: {...} }
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Compatibilité avec les anciennes idées : le premier objectif reste copié
+  // ici. Les nouveaux projets utilisent aussi la relation Goal ci-dessous.
+  finalGoal          String?
+  finalGoalFeedback  String?
+
+  // Lien de partage public en lecture seule (bouton "Partager mon analyse"
+  // dans le dashboard) — null tant qu'il n'a jamais été généré, valeur
+  // fixe une fois créée (pas régénérée à chaque clic).
+  shareToken    String?  @unique
+  shareViews    Int      @default(0) // Incrémenté à chaque ouverture de /share/[token]
+
+  historyEntries HistoryEntry[]
+  goals         Goal[]
+  quests        Quest[]
+  checkIns      CheckIn[]
+
+  @@index([userId])
+}
+
+// Les objectifs sont volontairement séparés du schéma de l'idée : ils restent
+// visibles comme fil rouge et peuvent évoluer sans supprimer l'historique des
+// quêtes. Maximum trois objectifs, contrôlé dans l'API.
+//
+// targetMetric/targetValue : objectif CHIFFRÉ réel, sur la même métrique que
+// les CheckIn ("clients" | "revenue" | "audience"). Sert de base au calcul de
+// la barre de progression globale (voir lib/progress.ts) : sans cible chiffrée,
+// impossible de mesurer un résultat réel plutôt qu'un simple effort déclaré.
+// Nullable : un objectif peut être créé avant que l'utilisateur ne précise
+// de cible chiffrée (l'UI la lui demande, mais on ne bloque pas s'il l'ignore).
+model Goal {
+  id            String   @id @default(cuid())
+  ideaId        String
+  idea          Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  text          String
+  targetMetric  String?  // "clients" | "revenue" | "audience"
+  targetValue   Float?
+  feedback      String?
+  changeReason  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ideaId, createdAt])
+}
+
+// Une quête = une action concrète, générée par l'IA, qui fait progresser le
+// projet vers l'objectif final (gagner de l'argent). Deux pistes PARALLÈLES
+// et indépendantes : "marketing" (visibilité, acquisition) et "technique"
+// (construire le produit/service). Chaque piste évolue par lots de 3 quêtes
+// ("stageLabel" décrit l'étape actuelle de CETTE piste, en langage libre —
+// ex: "Préparation du compte" pour le marketing, "Construction du MVP" pour
+// la technique). Voir lib/ai/quest-generator.ts.
+model Quest {
+  id          String    @id @default(cuid())
+  ideaId      String
+  idea        Idea      @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  track       String    // "marketing" | "technique"
+  stageLabel  String    // étape actuelle de cette piste, en langage libre, décidée par l'IA
+  title       String
+  detail      String
+  status      String    @default("PENDING") // "PENDING" | "DONE"
+  order       Int       // ordre d'affichage au sein du lot courant
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([ideaId])
+}
+
+// Une entrée d'historique = un check-in ou une modification du schéma dans le temps.
+// Uniquement exploité pleinement sur le forfait Pro, mais on log pour tout le monde
+// (ça ne coûte rien de stocker, et ça permet d'activer l'historique plus tard si on
+// change le forfait Starter).
+model HistoryEntry {
+  id          String   @id @default(cuid())
+  ideaId      String
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  type        String   // "creation" | "checkin" | "schema_update"
+  summary     String   // texte court affiché dans la timeline
+  createdAt   DateTime @default(now())
+
+  @@index([ideaId])
+}
+
+// Un check-in = un relevé chiffré ponctuel, déclaré par l'utilisateur, pour
+// alimenter les graphiques de la page Analyse. Champs FIXES et universels
+// (valables pour n'importe quel type de projet) : nombre de clients/utilisateurs,
+// revenu du mois, et un chiffre d'audience (abonnés/visiteurs/trafic — libellé
+// neutre, l'utilisateur interprète comme il veut). Purement déclaratif, non
+// vérifié : c'est un indicateur de motivation, pas une donnée financière auditée.
+// Un seul check-in par idée par jour (on écrase celui du jour si renvoyé).
+model CheckIn {
+  id        String   @id @default(cuid())
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  clients   Int      @default(0)
+  revenue   Float    @default(0)
+  audience  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([ideaId, createdAt])
+}
+
+// Un log par appel IA (chat), pour calculer la limite mensuelle (30 / 50 messages)
+// et pour l'anti-abus sur l'étape gratuite (voir DeviceLock plus bas).
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  // "schema" = chat sur le schéma (MindMap), "quest" = chat d'aide sur les
+  // quêtes — deux quotas séparés, même si la même limite mensuelle s'applique.
+  source    String   @default("schema")
+
+  @@index([userId, createdAt])
+}
+
+// Anti-abus sur l'étape gratuite (avant compte) : voir DeviceLock plus bas.
+model DeviceLock {
+  id            String   @id @default(cuid())
+  deviceHash    String   @unique
+  lastUsedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([deviceHash])
+}
+
+// Stockage temporaire de l'idée pendant le passage sur Stripe Checkout.
+// Pourquoi une table à part : les metadata Stripe sont limitées à 500
+// caractères par valeur, largement insuffisant pour un schéma JSON complet.
+// On stocke ici, on ne référence qu'un token court dans Stripe, et le
+// webhook vient chercher les vraies données via ce token puis supprime
+// la ligne (qu'il y ait paiement réussi ou non, via un nettoyage périodique
+// pour les abandons — voir /api/stripe/webhook).
+model PendingCheckout {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  userId        String
+  rawInput      String
+  schemaData    String   // JSON stringifié
+  createdAt     DateTime @default(now())
+
+  @@index([token])
+}
