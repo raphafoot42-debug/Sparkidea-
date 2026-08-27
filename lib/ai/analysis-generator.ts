@@ -3,7 +3,7 @@ import type { SchemaResult } from "./schema-generator";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Paragraphe court généré après chaque nouveau check-in (ou au chargement de
+// Paragraphe court généré après chaque nouveau check-in (ou au chargement de 
 // la page Analyse) : synthétise où en est le projet, en clair, sans jargon.
 export async function generateProjectAnalysis(
   schema: SchemaResult,
@@ -30,7 +30,7 @@ Donne une lecture honnête : ce qui avance bien, ce qui traîne (ex: piste techn
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-6",
       max_tokens: 400,
       system,
       messages: [{ role: "user", content: "Analyse la situation actuelle du projet." }],
