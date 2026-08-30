@@ -39,6 +39,18 @@ export default function HomePage() {
       });
   }, []);
 
+  // Tracking des clics venant du programme d'affiliation Spark Idea (site
+  // séparé, spark-idea-6.vercel.app) : si quelqu'un arrive ici avec
+  // ?ref=CODE, on prévient ce site que le lien de cet affilié a été ouvert.
+  // Lecture directe de l'URL (pas useSearchParams : ce hook impose un
+  // <Suspense> autour de toute la page en App Router, on l'évite ici pour
+  // ne pas restructurer tout le composant).
+  const [refCode, setRefCode] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRefCode(params.get("ref"));
+  }, []);
+
   // Avertit avant de fermer/recharger l'onglet en plein milieu des questions
   // (avant que le schéma soit prêt) — ne se déclenche jamais sur une
   // navigation interne (router.push vers /result), seulement sur une vraie
@@ -129,6 +141,15 @@ export default function HomePage() {
 
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
+      {refCode && (
+        <img
+          src={`https://spark-idea-6.vercel.app/api/track-click?code=${refCode}`}
+          width={1}
+          height={1}
+          style={{ display: "none" }}
+          alt=""
+        />
+      )}
       <AnimatedGrid intensity="intense" />
 
       <div
