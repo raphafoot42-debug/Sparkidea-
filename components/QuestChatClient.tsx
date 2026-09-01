@@ -31,24 +31,30 @@ export function QuestChatClient({
   // ---------------------------------------------------------------------
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const CARD_WIDTH = 480;
+
+  // Empêche la fenêtre de sortir de l'écran (impossible à rattraper sinon).
+  function clamp(x: number, y: number) {
+    const w = Math.min(CARD_WIDTH, window.innerWidth - 32);
+    const h = minimized ? 48 : 40; // hauteur mini de la barre visible à garder à l'écran
+    return {
+      x: Math.min(Math.max(x, 8), window.innerWidth - w - 8),
+      y: Math.min(Math.max(y, 8), window.innerHeight - h - 8),
+    };
+  }
 
   useEffect(() => {
-    const w = 480;
-    setPos({
-      x: Math.max(24, window.innerWidth - w - 60),
-      y: Math.max(24, window.innerHeight / 2 - 220),
-    });
+    setPos(clamp(window.innerWidth - CARD_WIDTH - 60, window.innerHeight / 2 - 220));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!dragging) return;
     function onMove(e: PointerEvent) {
-      setPos({
-        x: e.clientX - dragOffset.current.x,
-        y: e.clientY - dragOffset.current.y,
-      });
+      setPos(clamp(e.clientX - dragOffset.current.x, e.clientY - dragOffset.current.y));
     }
     function onUp() {
       setDragging(false);
@@ -146,7 +152,7 @@ export function QuestChatClient({
         position: "fixed",
         left: pos.x,
         top: pos.y,
-        width: 480,
+        width: CARD_WIDTH,
         maxWidth: "calc(100vw - 32px)",
         zIndex: 20,
         padding: 0,
@@ -159,21 +165,46 @@ export function QuestChatClient({
         onPointerDown={onHandlePointerDown}
         style={{
           padding: "10px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: minimized ? "none" : "1px solid rgba(255,255,255,0.08)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           cursor: "grab",
           userSelect: "none",
+          gap: 10,
         }}
       >
-        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>⠿⠿ IA de {projectTitle}</span>
-        <span style={{ fontSize: 10, color: "var(--muted)" }}>
-          {quota.used} / {quota.limit}
+        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          ⠿⠿ IA de {projectTitle}
         </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: "var(--muted)" }}>
+            {quota.used} / {quota.limit}
+          </span>
+          <button
+            onClick={() => setMinimized((v) => !v)}
+            aria-label={minimized ? "Agrandir" : "Réduire"}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 6,
+              color: "var(--muted)",
+              width: 22,
+              height: 22,
+              fontSize: 13,
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {minimized ? "▢" : "–"}
+          </button>
+        </div>
       </div>
 
-      <div style={{ padding: 20 }}>
+      {!minimized && <div style={{ padding: 20 }}>
         <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
           {messages.length === 0 && (
             <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
@@ -288,7 +319,7 @@ export function QuestChatClient({
             {busy ? "..." : "Envoyer"}
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
