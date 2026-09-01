@@ -6,7 +6,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 type Props = {
   schema: SchemaResult;
   onSchemaChange?: (schema: SchemaResult) => void;
-  // Si présent : chat authentifié, isolé sur CE projet précis (isolation
+  // Si présent : chat authentifié, isolé sur CE projet précis (isolation 
   // stricte gérée côté serveur dans /api/chat).
   ideaId?: string;
   // Sinon : chat gratuit, sans sauvegarde.
@@ -296,31 +296,29 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
             };
             if (n.type === "todo") {
               Object.assign(baseStyle, {
-                background: "linear-gradient(135deg, rgba(34,211,238,0.28), rgba(34,211,238,0.06))",
-                borderColor: "rgba(34,211,238,0.55)",
+                background: "linear-gradient(135deg, rgba(34,211,238,0.22), rgba(34,211,238,0.05))",
+                borderColor: "rgba(34,211,238,0.5)",
                 color: "#ecfeff",
               });
             } else if (n.type === "risk") {
               Object.assign(baseStyle, {
-                background: "linear-gradient(135deg, rgba(244,63,94,0.28), rgba(244,63,94,0.06))",
-                borderColor: "rgba(244,63,94,0.55)",
+                background: "linear-gradient(135deg, rgba(244,63,94,0.22), rgba(244,63,94,0.05))",
+                borderColor: "rgba(244,63,94,0.5)",
                 color: "#fff1f2",
-                clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)",
-                padding: "28px 16px 10px",
-                textAlign: "center",
-              });
-            } else {
-              Object.assign(baseStyle, {
-                background: "linear-gradient(135deg, rgba(168,85,247,0.28), rgba(168,85,247,0.06))",
-                borderColor: "rgba(168,85,247,0.55)",
-                color: "#faf5ff",
                 borderRadius: "50%",
                 width: 130,
                 height: 130,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 textAlign: "center",
+              });
+            } else {
+              Object.assign(baseStyle, {
+                background: "linear-gradient(135deg, rgba(168,85,247,0.22), rgba(168,85,247,0.05))",
+                borderColor: "rgba(168,85,247,0.5)",
+                color: "#faf5ff",
               });
             }
             return (
@@ -329,7 +327,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
                   aria-hidden="true"
                   className={
                     n.type === "risk"
-                      ? "ti ti-alert-triangle"
+                      ? "ti ti-alert-circle"
                       : n.type === "win"
                         ? "ti ti-sparkles"
                         : "ti ti-arrow-big-right-lines"
