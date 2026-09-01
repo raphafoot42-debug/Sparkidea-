@@ -92,12 +92,92 @@ export const settingsDict = {
     genericError: "Something went wrong.",
     accountSaved: "Changes saved.",
   },
+  ja: {
+    title: "設定",
+    appearance: "外観",
+    wallpaper: "背景",
+    dark: "ダーク",
+    light: "ライト",
+    language: "言語",
+    langNote:
+      "設定は保存されました。他の3言語への完全な翻訳はまだ完了していません — 今のところ背景だけが即座に変わります。",
+    blockedTitle: "アクセス制限中",
+    blockedCanceled:
+      "サブスクリプションが解約されました。ダッシュボード、スキーマ、履歴を取り戻すには、もう一度プランを選んでください。",
+    blockedNoPlan: "有効なプランがまだありません。ダッシュボードにアクセスするにはプランを選んでください。",
+    viewPlans: "プランを見る →",
+    account: "アカウント",
+    email: "メールアドレス",
+    newPasswordLabel: "新しいパスワード",
+    newPasswordHint: "（変更しない場合は空欄のまま）",
+    newPasswordPlaceholder: "8文字以上",
+    confirmPasswordPlaceholder: "新しいパスワードを確認",
+    currentPasswordLabel: "現在のパスワード",
+    currentPasswordHint: "（確認のため必須）",
+    currentPasswordPlaceholder: "現在のパスワード",
+    save: "保存",
+    saving: "...",
+    changePlan: "プランを変更",
+    changePlanSub: "別のプランに切り替える",
+    cancelPlan: "サブスクリプションを解約",
+    cancelPlanSub: "再度支払うまで即座にアクセスがブロックされます",
+    cancelConfirmText:
+      "解約を確認：再度支払うまでAI、スキーマ、履歴へのアクセスを失います。",
+    cancel: "キャンセル",
+    confirm: "確認",
+    confirming: "...",
+    telegramTeaser: "無料でお金を稼ぎたいですか？連絡してください。",
+    telegramLink: "Telegramで連絡する",
+    logout: "ログアウト",
+    passwordMismatch: "2つのパスワードが一致しません。",
+    currentPasswordRequired: "確認のため現在のパスワードを入力してください。",
+    genericError: "エラーが発生しました。",
+    accountSaved: "変更が保存されました。",
+  },
+  ru: {
+    title: "Настройки",
+    appearance: "Внешний вид",
+    wallpaper: "Фон",
+    dark: "Тёмный",
+    light: "Светлый",
+    language: "Язык",
+    langNote:
+      "Твоя настройка сохранена. Полный перевод интерфейса на остальные 3 языка пока не готов — сейчас сразу меняется только фон.",
+    blockedTitle: "Доступ заблокирован",
+    blockedCanceled:
+      "Твоя подписка была отменена. Выбери план снова, чтобы вернуть доступ к дашборду, схеме и истории.",
+    blockedNoPlan: "У твоего аккаунта пока нет активного плана. Выбери план, чтобы получить доступ к дашборду.",
+    viewPlans: "Посмотреть планы →",
+    account: "Аккаунт",
+    email: "Email",
+    newPasswordLabel: "Новый пароль",
+    newPasswordHint: "(оставь пустым, если не хочешь менять)",
+    newPasswordPlaceholder: "Минимум 8 символов",
+    confirmPasswordPlaceholder: "Подтверди новый пароль",
+    currentPasswordLabel: "Текущий пароль",
+    currentPasswordHint: "(обязателен для подтверждения)",
+    currentPasswordPlaceholder: "Текущий пароль",
+    save: "Сохранить",
+    saving: "...",
+    changePlan: "Сменить план",
+    changePlanSub: "Перейти на другой план",
+    cancelPlan: "Отменить подписку",
+    cancelPlanSub: "Доступ будет заблокирован немедленно до следующей оплаты",
+    cancelConfirmText:
+      "Подтверди отмену: ты потеряешь доступ к ИИ, схеме и истории до следующей оплаты.",
+    cancel: "Отмена",
+    confirm: "Подтвердить",
+    confirming: "...",
+    telegramTeaser: "Хочешь зарабатывать бесплатно? Напиши мне.",
+    telegramLink: "Написать нам в Telegram",
+    logout: "Выйти",
+    passwordMismatch: "Пароли не совпадают.",
+    currentPasswordRequired: "Введи текущий пароль для подтверждения.",
+    genericError: "Что-то пошло не так.",
+    accountSaved: "Изменения сохранены.",
+  },
 } as const;
 
 export function getSettingsDict(lang: Lang) {
-  // "ja" et "ru" n'ont pas encore de traduction — cast nécessaire car
-  // settingsDict ne contient pour l'instant que "fr" et "en", TypeScript ne
-  // peut pas savoir à la compilation que le repli sur .en couvre bien tous
-  // les cas manquants au runtime.
-  return settingsDict[lang as keyof typeof settingsDict] ?? settingsDict.en;
+  return settingsDict[lang];
 }
