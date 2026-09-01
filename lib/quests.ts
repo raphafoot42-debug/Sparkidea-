@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { generateQuestBatch, type Track } from "./ai/quest-generator";
-import type { SchemaResult } from "./ai/schema-generator";
+import type { SchemaResult } from "./ai/schema-generator"; 
 
 const TRACKS: Track[] = ["marketing", "technique"];
 
@@ -20,9 +20,10 @@ export async function ensureQuestBatch(ideaId: string, schema: SchemaResult) {
   }
   if (goals.length === 0) return;
 
-  for (const track of TRACKS) {
-    await ensureTrackBatch(ideaId, schema, track, goals);
-  }
+  // Les deux pistes (marketing + technique) n'ont aucune dépendance l'une
+  // sur l'autre pour cette génération — on les lance en parallèle plutôt
+  // qu'en série pour diviser le temps d'attente par deux.
+  await Promise.all(TRACKS.map((track) => ensureTrackBatch(ideaId, schema, track, goals)));
 }
 
 async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Track, goals: string[]) {
