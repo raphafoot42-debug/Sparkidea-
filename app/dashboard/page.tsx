@@ -9,11 +9,10 @@ import { DashboardClient } from "@/components/DashboardClient";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ensureQuestBatch } from "@/lib/quests";
 import { computeGlobalProgress } from "@/lib/progress";
-import { GoalStrip } from "@/components/GoalStrip";
 import { PrestigeClient } from "@/components/PrestigeClient";
 import { TrialBanner } from "@/components/TrialBanner";
 import { ShareButton } from "@/components/ShareButton";
-import type { SchemaResult } from "@/lib/ai/schema-generator";
+import type { SchemaResult } from "@/lib/ai/schema-generator"; 
 
 export default async function DashboardPage({
   searchParams,
@@ -109,15 +108,6 @@ export default async function DashboardPage({
           )}
           <ShareButton />
         </div>
-        {activeIdea.finalGoal && (
-          <GoalStrip
-            ideaId={activeIdea.id}
-            goals={(activeIdea.goals.length > 0 ? activeIdea.goals : [{
-              id: `${activeIdea.id}-initial`,
-              text: activeIdea.finalGoal,
-            }]).map((goal) => ({ id: goal.id, text: goal.text }))}
-          />
-        )}
         <ProjectSwitcher projects={allIdeas} activeIdeaId={activeIdea.id} />
         <Link
           href={`/dashboard/quests?idea=${activeIdea.id}`}
