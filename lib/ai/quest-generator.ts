@@ -270,3 +270,63 @@ L'utilisateur a déjà lu ce détail et ne comprend toujours pas ou ne sait pas 
   }
   return { reply: textBlock.text };
 }
+
+// ---------------------------------------------------------------------------
+// Chat libre, spécialisé sur le projet entier — décidé avec Raphaël : plus
+// besoin de sélectionner une quête précise avant de parler à l'IA. Elle
+// connaît tout le contexte du projet (schéma complet, quêtes en cours) et
+// répond librement à n'importe quelle question, tant que ça reste utile pour
+// avancer sur CE projet précis — comme un cerveau dédié, pas un simple
+// assistant de déblocage de quête.
+// ---------------------------------------------------------------------------
+export async function answerProjectChatMessage(
+  projectTitle: string,
+  schema: SchemaResult,
+  activeQuests: { title: string; track: Track }[],
+  message: string,
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" }
+): Promise<{ reply: string }> {
+  const questsText = activeQuests.length
+    ? activeQuests.map((q) => `- [${q.track}] ${q.title}`).join("\n")
+    : "(aucune quête en cours pour l'instant)";
+
+  const criteriaText = Object.entries(schema.criteria)
+    .map(([key, c]) => `- ${key} : ${c.score}/5 — ${c.note}`)
+    .join("\n");
+
+  const system = `Tu es l'IA personnelle du projet "${projectTitle}" sur Spark Idea. Tu es un cerveau dédié à CE projet précis — l'utilisateur peut te parler librement de n'importe quel souci ou question, pas seulement d'une quête précise.
+
+CONTEXTE DU PROJET :
+Score global : ${schema.overallScore}/10
+${criteriaText}
+
+QUÊTES EN COURS :
+${questsText}
+
+RÈGLES :
+- Réponds à n'importe quelle question ou problème que soulève l'utilisateur, même si ça ne correspond à aucune quête listée — reste utile avant tout.
+- Recentre toujours ta réponse sur les objectifs concrets de CE projet, jamais un conseil générique qui irait pour n'importe quel projet.
+- Si l'utilisateur semble partir sur un sujet totalement différent (un autre projet, hors-sujet complet), signale-le-lui honnêtement avant de continuer.
+- Si l'utilisateur a joint une image, regarde-la et base ta réponse dessus.
+- Sois concret, à la deuxième personne ("tu"), 2-6 phrases sauf si une vraie liste d'étapes est nécessaire.`;
+
+  const content: Anthropic.MessageParam["content"] = image
+    ? [
+        { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } },
+        { type: "text", text: message },
+      ]
+    : message;
+
+  const result = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 700,
+    system,
+    messages: [{ role: "user", content }],
+  });
+
+  const textBlock = result.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    return { reply: "Je n'ai pas pu répondre, réessaie." };
+  }
+  return { reply: textBlock.text };
+}
