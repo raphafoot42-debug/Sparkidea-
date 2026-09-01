@@ -10,7 +10,7 @@ const BodySchema = z.object({
   // Optionnel : un utilisateur qui s'inscrit directement (sans passer par
   // l'analyse gratuite de l'accueil) doit pouvoir payer quand même, sans
   // idée en attente — il en créera une depuis /dashboard/new après paiement.
-  pendingIdea: z
+  pendingIdea: z 
     .object({
       rawInput: z.string(),
       schemaData: z.unknown(),
@@ -35,15 +35,27 @@ export async function POST(req: NextRequest) {
   const { plan, pendingIdea } = parsed.data;
   const priceId = PLAN_PRICE_IDS[plan];
 
-  let stripeCustomerId = user.stripeCustomerId;
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({ email: user.email });
-    stripeCustomerId = customer.id;
-    await db.user.update({
-      where: { id: user.id },
-      data: { stripeCustomerId },
-    });
+  // Filet de sécurité : si le Price ID Stripe n'est pas configuré pour ce
+  // forfait (variable d'env manquante ou vide), on le dit clairement au lieu
+  // de laisser Stripe planter avec une erreur générique plus loin.
+  if (!priceId) {
+    console.error(`[stripe/checkout] Price ID manquant pour le forfait ${plan} — vérifie les variables d'env Vercel.`);
+    return NextResponse.json(
+      { error: "Ce forfait n'est pas encore configuré correctement, réessaie dans un instant." },
+      { status: 500 }
+    );
   }
+
+  try {
+    let stripeCustomerId = user.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({ email: user.email });
+      stripeCustomerId = customer.id;
+      await db.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
+      });
+    }
 
   // On stocke l'idée en attente à part (pas dans les metadata Stripe, trop
   // limitées en taille), et on ne transmet à Stripe qu'un token court pour
@@ -65,20 +77,27 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: stripeCustomerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/dashboard?payment=success`,
-    cancel_url: `${baseUrl}/pricing?payment=canceled`,
-    metadata: {
-      userId: user.id,
-      plan,
-      ...(token ? { pendingCheckoutToken: token } : {}),
-    },
-  });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: stripeCustomerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${baseUrl}/dashboard?payment=success`,
+      cancel_url: `${baseUrl}/pricing?payment=canceled`,
+      metadata: {
+        userId: user.id,
+        plan,
+        ...(token ? { pendingCheckoutToken: token } : {}),
+      },
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    console.error("[stripe/checkout] Erreur Stripe :", err);
+    return NextResponse.json(
+      { error: "Le paiement n'a pas pu démarrer, réessaie dans un instant." },
+      { status: 500 }
+    );
+  }
 }
