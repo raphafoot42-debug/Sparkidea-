@@ -76,8 +76,8 @@ export default function LoginPage() {
 
         <div style={{ textAlign: "center", fontSize: 11.5, color: "var(--muted)", marginTop: 12 }}>
           Mot de passe oublié ?{" "}
-          <a href="tel:+33780112707" style={{ color: "var(--line)" }}>
-            Contactez le responsable BRES
+          <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ color: "var(--line)" }}>
+            Contacte-nous sur Telegram
           </a>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
