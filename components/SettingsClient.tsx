@@ -7,7 +7,7 @@ type Props = {
   blocked: boolean;
   subscriptionStatus: string;
   email: string;
-  theme: "dark" | "light";
+  theme: "dark" | "light"; 
   language: "fr" | "en" | "ja" | "ru";
 };
 
@@ -270,8 +270,8 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
           <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 4 }}>
             Envie de gagner de l&apos;argent gratuitement ? Contacte-moi.
           </div>
-          <a href="tel:0780112707" style={{ fontSize: 13, color: "var(--accent, #22d3ee)" }}>
-            07 80 11 27 07
+          <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--accent, #22d3ee)" }}>
+            Nous contacter sur Telegram
           </a>
         </div>
       )}
