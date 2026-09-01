@@ -1,6 +1,6 @@
 // POST /api/signup -> crée une demande d'inscription en attente de
 // validation par l'admin/sous-chef (utilisé par le lien de parrainage),
-// stockée dans la même table Supabase app_db (colonne data, clé pendingSignups).
+// stockée dans la même table Supabase app_db (colonne data, clé pendingSignups). 
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
