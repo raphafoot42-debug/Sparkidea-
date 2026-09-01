@@ -2,23 +2,20 @@
 
 import { useRef, useState, useEffect } from "react";
 
-type Quest = { id: string; title: string; detail: string };
 type Attachment = { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; previewUrl: string };
 type Msg = { role: "user" | "assistant"; text: string; imagePreview?: string };
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function QuestChatClient({
-  quests,
-  initialQuestId,
+  ideaId,
+  projectTitle,
   quota,
 }: {
-  quests: Quest[];
-  initialQuestId?: string;
+  ideaId: string;
+  projectTitle: string;
   quota: { used: number; limit: number };
 }) {
-  const preselected = initialQuestId && quests.some((q) => q.id === initialQuestId) ? initialQuestId : quests[0]?.id ?? "";
-  const [questId, setQuestId] = useState(preselected);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,10 +27,7 @@ export function QuestChatClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ---------------------------------------------------------------------
-  // Fenêtre flottante déplaçable — position libre dans le dashboard
-  // (décor "canvas infini" demandé par Raphaël). Position par défaut :
-  // centrée à droite de l'écran. On mémorise juste x/y en state, la
-  // poignée en haut de la carte déclenche le déplacement au pointer.
+  // Fenêtre flottante déplaçable — position libre dans le dashboard.
   // ---------------------------------------------------------------------
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -41,9 +35,6 @@ export function QuestChatClient({
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Position initiale : centrée verticalement, calée à droite — seulement
-    // une fois le composant monté côté client (évite tout souci SSR avec
-    // window non défini).
     const w = 480;
     setPos({
       x: Math.max(24, window.innerWidth - w - 60),
@@ -76,8 +67,6 @@ export function QuestChatClient({
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     setDragging(true);
   }
-
-  const activeQuest = quests.find((q) => q.id === questId);
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -121,7 +110,7 @@ export function QuestChatClient({
 
   async function send() {
     const msg = input.trim();
-    if ((!msg && !attachment) || busy || !questId) return;
+    if ((!msg && !attachment) || busy) return;
     setBusy(true);
     setError(null);
     setInput("");
@@ -134,7 +123,7 @@ export function QuestChatClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        questId,
+        ideaId,
         message: msg || "Regarde cette image et aide-moi.",
         image: sentAttachment ? { base64: sentAttachment.base64, mediaType: sentAttachment.mediaType } : undefined,
       }),
@@ -147,16 +136,6 @@ export function QuestChatClient({
       return;
     }
     setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
-  }
-
-  if (quests.length === 0) {
-    return (
-      <div className="panel" style={{ padding: 20, textAlign: "center", maxWidth: 480, width: "100%" }}>
-        <p style={{ fontSize: 13.5, color: "var(--muted)" }}>
-          Aucune quête en cours pour l&apos;instant — reviens ici si tu bloques sur une quête.
-        </p>
-      </div>
-    );
   }
 
   return (
@@ -176,7 +155,6 @@ export function QuestChatClient({
         userSelect: dragging ? "none" : "auto",
       }}
     >
-      {/* Poignée de déplacement */}
       <div
         onPointerDown={onHandlePointerDown}
         style={{
@@ -189,40 +167,17 @@ export function QuestChatClient({
           userSelect: "none",
         }}
       >
-        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>⠿⠿ Aide IA</span>
+        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em" }}>⠿⠿ IA de {projectTitle}</span>
         <span style={{ fontSize: 10, color: "var(--muted)" }}>
           {quota.used} / {quota.limit}
         </span>
       </div>
 
       <div style={{ padding: 20 }}>
-        <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
-          Pour quand une quête reste floue même après &quot;Voir plus&quot;. Quota séparé du chat sur le schéma.
-        </p>
-
-        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-          Sur quelle quête tu bloques ?
-        </label>
-        <select
-          value={questId}
-          onChange={(e) => {
-            setQuestId(e.target.value);
-            setMessages([]);
-          }}
-          className="field-input"
-          style={{ marginBottom: 16 }}
-        >
-          {quests.map((q) => (
-            <option key={q.id} value={q.id}>
-              {q.title}
-            </option>
-          ))}
-        </select>
-
         <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
           {messages.length === 0 && (
             <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
-              Dis-moi ce qui bloque sur « {activeQuest?.title} » et je t&apos;explique autrement.
+              Pose n&apos;importe quelle question sur ton projet — je connais déjà ton schéma et tes quêtes en cours.
             </p>
           )}
           {messages.map((m, i) => (
@@ -326,7 +281,7 @@ export function QuestChatClient({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             className="field-input"
-            placeholder={recording ? "Je t'écoute..." : "Explique ce qui bloque..."}
+            placeholder={recording ? "Je t'écoute..." : "Pose ta question..."}
             style={{ flex: 1 }}
           />
           <button onClick={send} disabled={busy} className="btn-primary">
