@@ -48,6 +48,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   // Verrou de l'essai gratuit (avant compte) : les questions de clarification
   // ont déjà eu lieu AVANT le schéma (voir app/page.tsx + askClarifyingQuestion).
   // Une fois le schéma affiché, le chat est complètement verrouillé — seul
@@ -157,6 +158,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
     setChatBusy(true);
     setChatError(null);
     setChatInput("");
+    setChatMessages((m) => [...m, { role: "user", text: msg }]);
 
     try {
       if (freeMode) {
@@ -170,6 +172,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
           setChatError(data.error ?? "Erreur.");
         } else {
           setFreeMessageCount((n) => n + 1);
+          if (data.reply) setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
           if (data.newNode && onSchemaChange) {
             onSchemaChange({ ...schema, nodes: [...schema.nodes, data.newNode] });
           }
@@ -183,8 +186,9 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
         const data = await res.json();
         if (!res.ok) {
           setChatError(data.error ?? "Erreur.");
-        } else if (onSchemaChange) {
-          onSchemaChange(data.schema);
+        } else {
+          if (data.reply) setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+          if (onSchemaChange) onSchemaChange(data.schema);
         }
       }
     } finally {
@@ -391,6 +395,45 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
           {aiText}
         </div>
       </div>
+
+      {/* Historique des messages, juste au-dessus de la barre de saisie */}
+      {chatMessages.length > 0 && (
+        <div
+          className="panel"
+          style={{
+            position: "fixed",
+            bottom: 76,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 15,
+            width: "min(560px, 70vw)",
+            maxHeight: 260,
+            overflowY: "auto",
+            padding: 14,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          {chatMessages.map((m, i) => (
+            <div key={i} style={{ textAlign: m.role === "user" ? "right" : "left" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "7px 11px",
+                  borderRadius: 9,
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  maxWidth: "85%",
+                  background: m.role === "user" ? "rgba(34,211,238,0.15)" : "var(--surface-subtle)",
+                }}
+              >
+                {m.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Barre de chat */}
       <div
