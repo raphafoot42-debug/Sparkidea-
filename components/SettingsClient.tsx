@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getSettingsDict } from "@/lib/i18n";
 
 type Props = {
   blocked: boolean;
@@ -27,6 +28,7 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
   const [currentTheme, setCurrentTheme] = useState(theme);
   const [currentLanguage, setCurrentLanguage] = useState(language);
   const [prefsLoading, setPrefsLoading] = useState(false);
+  const t = getSettingsDict(currentLanguage);
 
   async function savePrefs(next: { theme?: "dark" | "light"; language?: "fr" | "en" | "ja" | "ru" }) {
     setPrefsLoading(true);
@@ -58,11 +60,11 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
     setAccountSuccess(null);
 
     if (newPassword && newPassword !== confirmPassword) {
-      setAccountError("Les deux mots de passe ne correspondent pas.");
+      setAccountError(t.passwordMismatch);
       return;
     }
     if (!currentPassword) {
-      setAccountError("Entre ton mot de passe actuel pour confirmer.");
+      setAccountError(t.currentPasswordRequired);
       return;
     }
 
@@ -80,11 +82,11 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
     setAccountLoading(false);
 
     if (!res.ok) {
-      setAccountError(data.error ?? "Une erreur est survenue.");
+      setAccountError(data.error ?? t.genericError);
       return;
     }
 
-    setAccountSuccess("Modifications enregistrées.");
+    setAccountSuccess(t.accountSaved);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
@@ -107,13 +109,13 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
 
   return (
     <div style={{ width: "100%", maxWidth: 480 }}>
-      <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Paramètres</h1>
+      <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>{t.title}</h1>
 
       {/* Apparence + langue */}
       <div className="panel" style={{ marginBottom: 16, padding: "18px 20px" }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 14 }}>Apparence</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 14 }}>{t.appearance}</div>
 
-        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Fond d&apos;écran</label>
+        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>{t.wallpaper}</label>
         <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
           <button
             type="button"
@@ -122,7 +124,7 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
             className={currentTheme === "dark" ? "btn-primary" : "btn-secondary"}
             style={{ flex: 1 }}
           >
-            Noir
+            {t.dark}
           </button>
           <button
             type="button"
@@ -131,11 +133,11 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
             className={currentTheme === "light" ? "btn-primary" : "btn-secondary"}
             style={{ flex: 1 }}
           >
-            Blanc
+            {t.light}
           </button>
         </div>
 
-        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Langue</label>
+        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>{t.language}</label>
         <select
           value={currentLanguage}
           onChange={(e) => savePrefs({ language: e.target.value as "fr" | "en" | "ja" | "ru" })}
@@ -149,8 +151,7 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
           ))}
         </select>
         <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.5 }}>
-          Ta préférence est enregistrée. La traduction complète de l&apos;interface dans les 3 autres langues n&apos;est
-          pas encore faite — pour l&apos;instant seul le fond d&apos;écran change immédiatement.
+          {t.langNote}
         </p>
       </div>
 
@@ -165,24 +166,22 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
           }}
         >
           <div style={{ fontSize: 13.5, fontWeight: 600, color: "#fca5a5", marginBottom: 6 }}>
-            Accès bloqué
+            {t.blockedTitle}
           </div>
           <p style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
-            {subscriptionStatus === "CANCELED"
-              ? "Ton abonnement a été résilié. Reprends un forfait pour retrouver ton dashboard, ton schéma et ton historique."
-              : "Ton compte n'a pas encore de forfait actif. Choisis un forfait pour accéder à ton dashboard."}
+            {subscriptionStatus === "CANCELED" ? t.blockedCanceled : t.blockedNoPlan}
           </p>
           <button className="btn-primary" onClick={() => router.push("/pricing")}>
-            Voir les forfaits →
+            {t.viewPlans}
           </button>
         </div>
       )}
 
       {/* Email + mot de passe — vrai formulaire fonctionnel */}
       <form onSubmit={handleAccountSubmit} className="panel" style={{ marginBottom: 16, padding: "18px 20px" }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 14 }}>Compte</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 14 }}>{t.account}</div>
 
-        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Email</label>
+        <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>{t.email}</label>
         <input
           type="email"
           value={newEmail}
@@ -192,14 +191,14 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
         />
 
         <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-          Nouveau mot de passe <span style={{ opacity: 0.6 }}>(laisser vide pour ne pas changer)</span>
+          {t.newPasswordLabel} <span style={{ opacity: 0.6 }}>{t.newPasswordHint}</span>
         </label>
         <input
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           className="field-input"
-          placeholder="8 caractères minimum"
+          placeholder={t.newPasswordPlaceholder}
           style={{ marginBottom: 10 }}
         />
         {newPassword && (
@@ -208,20 +207,20 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="field-input"
-            placeholder="Confirme le nouveau mot de passe"
+            placeholder={t.confirmPasswordPlaceholder}
             style={{ marginBottom: 10 }}
           />
         )}
 
         <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 6 }}>
-          Mot de passe actuel <span style={{ opacity: 0.6 }}>(requis pour confirmer)</span>
+          {t.currentPasswordLabel} <span style={{ opacity: 0.6 }}>{t.currentPasswordHint}</span>
         </label>
         <input
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
           className="field-input"
-          placeholder="Mot de passe actuel"
+          placeholder={t.currentPasswordPlaceholder}
           style={{ marginBottom: 14 }}
         />
 
@@ -231,17 +230,17 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
         )}
 
         <button type="submit" disabled={accountLoading} className="btn-primary" style={{ width: "100%" }}>
-          {accountLoading ? "..." : "Enregistrer"}
+          {accountLoading ? t.saving : t.save}
         </button>
       </form>
 
       {!blocked && (
         <div className="panel" style={{ marginBottom: 16, overflow: "hidden" }}>
-          <Row label="Changer d&apos;abonnement" sub="Passer à un autre forfait" onClick={() => router.push("/pricing")} />
+          <Row label={t.changePlan} sub={t.changePlanSub} onClick={() => router.push("/pricing")} />
           {!confirmCancel ? (
             <Row
-              label="Résilier l&apos;abonnement"
-              sub="Accès bloqué immédiatement jusqu'à nouveau paiement"
+              label={t.cancelPlan}
+              sub={t.cancelPlanSub}
               danger
               last
               onClick={() => setConfirmCancel(true)}
@@ -249,15 +248,14 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
           ) : (
             <div style={{ padding: "15px 18px" }}>
               <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 12 }}>
-                Confirme la résiliation : tu perdras l&apos;accès à l&apos;IA, à ton schéma et à ton historique
-                jusqu&apos;à ce que tu repayes.
+                {t.cancelConfirmText}
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn-secondary" onClick={() => setConfirmCancel(false)} style={{ flex: 1 }}>
-                  Annuler
+                  {t.cancel}
                 </button>
                 <button className="btn-danger" onClick={handleCancel} disabled={cancelLoading} style={{ flex: 1 }}>
-                  {cancelLoading ? "..." : "Confirmer"}
+                  {cancelLoading ? t.confirming : t.confirm}
                 </button>
               </div>
             </div>
@@ -268,16 +266,16 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
       {!blocked && (
         <div className="panel" style={{ marginBottom: 16, padding: "15px 18px" }}>
           <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 4 }}>
-            Envie de gagner de l&apos;argent gratuitement ? Contacte-moi.
+            {t.telegramTeaser}
           </div>
           <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "var(--accent, #22d3ee)" }}>
-            Nous contacter sur Telegram
+            {t.telegramLink}
           </a>
         </div>
       )}
 
       <div className="panel" style={{ overflow: "hidden" }}>
-        <Row label="Déconnexion" onClick={handleLogout} last />
+        <Row label={t.logout} onClick={handleLogout} last />
       </div>
     </div>
   );
