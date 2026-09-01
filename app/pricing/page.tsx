@@ -45,26 +45,42 @@ export default function PricingPage() {
     setLoadingPlan(plan);
     setError(null);
 
-    const raw = sessionStorage.getItem("spark_pending_schema");
-    const pending = raw ? JSON.parse(raw) : null;
+    // Tout est entouré d'un try/catch/finally : quoi qu'il arrive (panne
+    // réseau, réponse non-JSON, erreur serveur inattendue), le bouton ne
+    // doit plus jamais rester bloqué indéfiniment sur "...".
+    try {
+      const raw = sessionStorage.getItem("spark_pending_schema");
+      const pending = raw ? JSON.parse(raw) : null;
 
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        plan,
-        ...(pending ? { pendingIdea: { rawInput: pending.rawInput, schemaData: pending.schema } } : {}),
-      }),
-    });
-    const data = await res.json();
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          ...(pending ? { pendingIdea: { rawInput: pending.rawInput, schemaData: pending.schema } } : {}),
+        }),
+      });
 
-    if (!res.ok || !data.url) {
-      setError(data.error ?? "Impossible de démarrer le paiement.");
+      let data: { url?: string; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Le serveur a renvoyé une réponse qui n'est pas du JSON valide
+        // (page d'erreur générique par exemple) — on traite ça comme une
+        // erreur propre plutôt que de planter silencieusement.
+      }
+
+      if (!res.ok || !data.url) {
+        setError(data.error ?? "Impossible de démarrer le paiement, réessaie dans un instant.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setError("Impossible de contacter le serveur, vérifie ta connexion et réessaie.");
+    } finally {
       setLoadingPlan(null);
-      return;
     }
-
-    window.location.href = data.url;
   }
 
   return (
