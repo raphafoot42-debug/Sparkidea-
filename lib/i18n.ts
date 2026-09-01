@@ -95,5 +95,9 @@ export const settingsDict = {
 } as const;
 
 export function getSettingsDict(lang: Lang) {
-  return settingsDict[lang] ?? settingsDict.en;
+  // "ja" et "ru" n'ont pas encore de traduction — cast nécessaire car
+  // settingsDict ne contient pour l'instant que "fr" et "en", TypeScript ne
+  // peut pas savoir à la compilation que le repli sur .en couvre bien tous
+  // les cas manquants au runtime.
+  return settingsDict[lang as keyof typeof settingsDict] ?? settingsDict.en;
 }
