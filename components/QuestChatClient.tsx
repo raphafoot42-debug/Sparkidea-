@@ -36,6 +36,21 @@ export function QuestChatClient({
   const cardRef = useRef<HTMLDivElement>(null);
   const CARD_WIDTH = 480;
 
+  // Sur mobile/tablette (écran étroit), la fenêtre flottante librement
+  // déplaçable est difficile à manier — on bascule sur un panneau ancré en
+  // bas de l'écran, pleine largeur, sans glisser-déposer. Décidé avec
+  // Raphaël : le flottant reste sur desktop, mais doit être "maniable"
+  // partout, pas juste joli.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 720);
+    }
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Empêche la fenêtre de sortir de l'écran (impossible à rattraper sinon).
   function clamp(x: number, y: number) {
     const w = Math.min(CARD_WIDTH, window.innerWidth - 32);
@@ -52,7 +67,7 @@ export function QuestChatClient({
   }, []);
 
   useEffect(() => {
-    if (!dragging) return;
+    if (!dragging || isMobile) return;
     function onMove(e: PointerEvent) {
       setPos(clamp(e.clientX - dragOffset.current.x, e.clientY - dragOffset.current.y));
     }
@@ -65,9 +80,10 @@ export function QuestChatClient({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragging]);
+  }, [dragging, isMobile]);
 
   function onHandlePointerDown(e: React.PointerEvent) {
+    if (isMobile) return; // pas de glisser-déposer sur mobile, ancré en bas
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -148,18 +164,36 @@ export function QuestChatClient({
     <div
       ref={cardRef}
       className="panel"
-      style={{
-        position: "fixed",
-        left: pos.x,
-        top: pos.y,
-        width: CARD_WIDTH,
-        maxWidth: "calc(100vw - 32px)",
-        zIndex: 20,
-        padding: 0,
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-        cursor: dragging ? "grabbing" : "default",
-        userSelect: dragging ? "none" : "auto",
-      }}
+      style={
+        isMobile
+          ? {
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: "100%",
+              maxWidth: "100%",
+              zIndex: 20,
+              padding: 0,
+              borderRadius: "16px 16px 0 0",
+              boxShadow: "0 -8px 30px rgba(0,0,0,0.5)",
+              maxHeight: minimized ? undefined : "75vh",
+              display: "flex",
+              flexDirection: "column",
+            }
+          : {
+              position: "fixed",
+              left: pos.x,
+              top: pos.y,
+              width: CARD_WIDTH,
+              maxWidth: "calc(100vw - 32px)",
+              zIndex: 20,
+              padding: 0,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+              cursor: dragging ? "grabbing" : "default",
+              userSelect: dragging ? "none" : "auto",
+            }
+      }
     >
       <div
         onPointerDown={onHandlePointerDown}
@@ -169,9 +203,10 @@ export function QuestChatClient({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          cursor: "grab",
+          cursor: isMobile ? "default" : "grab",
           userSelect: "none",
           gap: 10,
+          flexShrink: 0,
         }}
       >
         <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
