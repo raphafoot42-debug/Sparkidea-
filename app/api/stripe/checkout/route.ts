@@ -77,7 +77,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    // Filet de sécurité : si NEXT_PUBLIC_BASE_URL n'est pas configuré (ou
+    // mal configuré) dans Vercel, on retombe sur l'en-tête "origin" de la
+    // requête plutôt que d'envoyer une URL invalide à Stripe (ce qui
+    // faisait planter le paiement avec "Not a valid URL").
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.headers.get("origin") || "";
+    if (!baseUrl) {
+      console.error("[stripe/checkout] Impossible de déterminer l'URL de base (NEXT_PUBLIC_BASE_URL absent et pas d'origin).");
+      return NextResponse.json(
+        { error: "Configuration du paiement incomplète, réessaie dans un instant." },
+        { status: 500 }
+      );
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
