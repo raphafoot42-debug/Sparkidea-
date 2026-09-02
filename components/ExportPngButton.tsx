@@ -4,7 +4,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 // Dessine le schéma sur un <canvas> natif du navigateur puis déclenche le
 // téléchargement en PNG — aucune librairie externe (pas de html2canvas),
-// juste l'API Canvas 2D déjà disponible partout.
+// juste l'API Canvas 2D déjà disponible partout. 
 export function ExportPngButton({ schema }: { schema: SchemaResult }) {
   function handleExport() {
     const width = 800;
@@ -100,10 +100,15 @@ export function ExportPngButton({ schema }: { schema: SchemaResult }) {
     ctx.font = "11px sans-serif";
     ctx.fillText("Généré avec Spark Idea", 40, height - 30);
 
+    // Safari (iPhone/iPad) exige que le lien soit réellement attaché à la
+    // page avant .click(), sinon le téléchargement échoue silencieusement.
     const link = document.createElement("a");
     link.download = `${schema.projectTitle.replace(/[^a-z0-9]/gi, "-")}.png`;
     link.href = canvas.toDataURL("image/png");
+    link.style.display = "none";
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   }
 
   return (
