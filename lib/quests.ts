@@ -18,7 +18,11 @@ export async function ensureQuestBatch(ideaId: string, schema: SchemaResult) {
   if (goals.length === 0 && idea?.finalGoal) {
     goals.push(idea.finalGoal);
   }
-  if (goals.length === 0) return;
+  // FIX : ne plus bloquer la génération si aucun objectif n'est défini —
+  // generateQuestBatch gère déjà très bien un tableau goals vide (voir son
+  // prompt). Avant, l'absence d'objectif faisait sortir la fonction ici
+  // sans rien générer, silencieusement, ce qui laissait le dashboard
+  // "charger" indéfiniment sans qu'aucune quête n'apparaisse jamais.
 
   // Les deux pistes (marketing + technique) n'ont aucune dépendance l'une
   // sur l'autre pour cette génération — on les lance en parallèle plutôt
