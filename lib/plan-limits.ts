@@ -1,8 +1,18 @@
-// Source unique de vérité pour les 3 forfaits (9€ / 24€ / 74€).
+// Source unique de vérité pour les 3 forfaits (19€ / 49€ / 97€).
 // Tout le reste du code (API + UI) doit lire ces constantes plutôt que
 // dupliquer des chiffres en dur — sinon les forfaits finissent par
-// diverger entre deux endroits (c'était déjà le cas avant ce fichier).
-export const QUEST_CHAT_MESSAGE_LIMITS = { STARTER: 30, PRO: 50, STUDIO: 150 } as const;
+// diverger entre deux endroits (c'était déjà le cas avant ce fichier —
+// et encore le cas sur la page /pricing jusqu'à ce qu'on la fasse lire
+// cette constante directement).
+//
+// Relevé le 03/09 : le coût réel en tokens Claude est de l'ordre de
+// quelques centimes par message, même avec une image jointe. Les plafonds
+// ci-dessous sont calés sur un budget coût-IA cible par forfait plutôt que
+// choisis au hasard : ~1,5€/mois de coût IA total pour Starter (schéma +
+// quêtes + messages sur 1 idée), ~3,5€/mois pour Élite (jusqu'à 15 idées).
+// Le mode essai (TRIAL_MESSAGE_LIMIT, dans lib/trial.ts) est indépendant
+// de ces plafonds et n'a pas été touché.
+export const QUEST_CHAT_MESSAGE_LIMITS = { STARTER: 350, PRO: 500, STUDIO: 600 } as const;
 export type PlanKey = keyof typeof QUEST_CHAT_MESSAGE_LIMITS;
 
 // Nombre maximum de projets ("idées") actifs conservés par forfait.
