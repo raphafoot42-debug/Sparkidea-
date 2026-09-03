@@ -90,9 +90,6 @@ export function GoalStrip({
           boxShadow: "0 16px 38px rgba(0,0,0,0.16)",
         }}
       >
-        <div style={{ position: "absolute", top: 8, right: 16, color: "var(--line)", opacity: 0.7, letterSpacing: 8, fontSize: 15 }}>
-          ✦ ✦ ✦
-        </div>
         <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--line)", marginBottom: 8 }}>
           Ton objectif
         </div>
