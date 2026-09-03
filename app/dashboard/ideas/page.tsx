@@ -45,6 +45,7 @@ export default async function IdeasPage() {
             <Link
               key={idea.id}
               href={`/dashboard?idea=${idea.id}`}
+              prefetch={false}
               className="panel"
               style={{
                 display: "block",
