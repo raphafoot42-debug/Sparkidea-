@@ -111,6 +111,7 @@ export default async function DashboardPage({
         <ProjectSwitcher projects={allIdeas} activeIdeaId={activeIdea.id} />
         <Link
           href={`/dashboard/quests?idea=${activeIdea.id}`}
+          prefetch={false}
           className="btn-primary"
           style={{ marginTop: 16, display: "inline-block" }}
         >
