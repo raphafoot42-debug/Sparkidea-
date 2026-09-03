@@ -7,6 +7,101 @@ type Msg = { role: "user" | "assistant"; text: string; imagePreview?: string };
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
+// ---------------------------------------------------------------------------
+// Icônes — le strict minimum fonctionnel (joindre / micro / envoyer / fermer),
+// traits fins, monochrome, sans décoration. Pas de menu, pas d'icône pour
+// des choses qui n'en ont pas besoin (le bandeau du haut se glisse tout seul,
+// pas besoin d'une icône de poignée dessus).
+// ---------------------------------------------------------------------------
+function ChevronIcon({ direction }: { direction: "up" | "down" }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <path
+        d={direction === "up" ? "M3 8.5 6.5 5 10 8.5" : "M3 4.5 6.5 8 10 4.5"}
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+function MicIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <rect x="5.5" y="1.5" width="5" height="8" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3.2 8.2a4.8 4.8 0 0 0 9.6 0M8 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+function StopIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <rect x="2" y="2" width="9" height="9" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+function SendIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+      <path d="M2 8.4 13.5 3l-4 11-2.2-4.6L2 8.4Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+function CloseIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Bulle "l'IA réfléchit" — trois points qui pulsent, dans une bulle assistant
+// normale, à gauche comme le reste des réponses. Remplace le simple "..."
+// sur le bouton, qui ne se voyait pas dans la conversation elle-même.
+function ThinkingBubble() {
+  return (
+    <div style={{ marginBottom: 10, textAlign: "left" }}>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "10px 14px",
+          borderRadius: 10,
+          background: "var(--surface-subtle)",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "var(--muted)",
+              animation: `spark-think 1.1s ${i * 0.15}s infinite ease-in-out`,
+            }}
+          />
+        ))}
+      </span>
+      <style>{`
+        @keyframes spark-think {
+          0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+          30% { opacity: 1; transform: translateY(-2px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export function QuestChatClient({
   ideaId,
   projectTitle,
@@ -21,10 +116,10 @@ export function QuestChatClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
-  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [attachWarning, setAttachWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   // ---------------------------------------------------------------------
   // Fenêtre flottante déplaçable — position libre dans le dashboard.
@@ -97,7 +192,7 @@ export function QuestChatClient({
     setAttachWarning(null);
 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setAttachWarning("Seules les photos sont analysées par l'IA pour l'instant — vidéos et autres fichiers pas encore supportés.");
+      setAttachWarning("Seules les photos sont analysées par l'IA pour l'instant.");
       return;
     }
     const reader = new FileReader();
@@ -109,23 +204,35 @@ export function QuestChatClient({
     reader.readAsDataURL(file);
   }
 
+  // Micro à bascule, façon Gemini/Claude : un appui démarre l'écoute, un
+  // second appui sur le MÊME bouton l'arrête explicitement (au lieu de
+  // dépendre uniquement du silence détecté par le navigateur). Le texte
+  // reconnu atterrit dans le champ, prêt à être complété ou envoyé.
   function toggleVoice() {
+    if (recording) {
+      recognitionRef.current?.stop();
+      return;
+    }
     const SpeechRecognitionCtor =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) {
       setAttachWarning("La dictée vocale n'est pas disponible sur ce navigateur.");
       return;
     }
-    if (recording) return;
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "fr-FR";
     recognition.interimResults = false;
+    recognition.continuous = true;
     recognition.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript;
+      let transcript = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
       setInput((prev) => (prev ? prev + " " + transcript : transcript));
     };
     recognition.onend = () => setRecording(false);
     recognition.onerror = () => setRecording(false);
+    recognitionRef.current = recognition;
     setRecording(true);
     recognition.start();
   }
@@ -138,7 +245,6 @@ export function QuestChatClient({
     setInput("");
     const sentAttachment = attachment;
     setAttachment(null);
-    setAttachMenuOpen(false);
     setMessages((m) => [...m, { role: "user", text: msg || "(photo jointe)", imagePreview: sentAttachment?.previewUrl }]);
 
     const res = await fetch("/api/quests/chat", {
@@ -159,6 +265,8 @@ export function QuestChatClient({
     }
     setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
   }
+
+  const canSend = !busy && (input.trim().length > 0 || !!attachment);
 
   return (
     <div
@@ -198,7 +306,7 @@ export function QuestChatClient({
       <div
         onPointerDown={onHandlePointerDown}
         style={{
-          padding: "10px 16px",
+          padding: "10px 14px",
           borderBottom: minimized ? "none" : "1px solid rgba(255,255,255,0.08)",
           display: "flex",
           alignItems: "center",
@@ -209,8 +317,8 @@ export function QuestChatClient({
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.08em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          ⠿⠿ IA de {projectTitle}
+        <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.04em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          IA · {projectTitle}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <span style={{ fontSize: 10, color: "var(--muted)" }}>
@@ -226,22 +334,20 @@ export function QuestChatClient({
               color: "var(--muted)",
               width: 22,
               height: 22,
-              fontSize: 13,
-              lineHeight: 1,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            {minimized ? "▢" : "–"}
+            <ChevronIcon direction={minimized ? "up" : "down"} />
           </button>
         </div>
       </div>
 
       {!minimized && <div style={{ padding: 20 }}>
         <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
-          {messages.length === 0 && (
+          {messages.length === 0 && !busy && (
             <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
               Pose n&apos;importe quelle question sur ton projet — je connais déjà ton schéma et tes quêtes en cours.
             </p>
@@ -276,6 +382,7 @@ export function QuestChatClient({
               </span>
             </div>
           ))}
+          {busy && <ThinkingBubble />}
         </div>
 
         {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
@@ -289,72 +396,83 @@ export function QuestChatClient({
             <span style={{ fontSize: 12, color: "var(--muted)" }}>Photo prête à envoyer</span>
             <button
               onClick={() => setAttachment(null)}
-              style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 12 }}
+              aria-label="Retirer la pièce jointe"
+              style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
             >
-              Retirer
+              <CloseIcon /> Retirer
             </button>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8, position: "relative" }}>
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setAttachMenuOpen((v) => !v)}
-              className="btn-secondary"
-              aria-label="Joindre"
-              style={{ padding: "0 12px", fontSize: 16 }}
-            >
-              +
-            </button>
-            {attachMenuOpen && (
-              <div
-                className="panel"
-                style={{
-                  position: "absolute",
-                  bottom: "calc(100% + 6px)",
-                  left: 0,
-                  zIndex: 10,
-                  padding: 6,
-                  display: "flex",
-                  flexDirection: "column",
-                  minWidth: 170,
-                }}
-              >
-                <button
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                    setAttachMenuOpen(false);
-                  }}
-                  style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
-                >
-                  📷 Photo / capture d&apos;écran
-                </button>
-                <button
-                  onClick={() => {
-                    toggleVoice();
-                    setAttachMenuOpen(false);
-                  }}
-                  style={{ background: "transparent", border: "none", color: "var(--text)", textAlign: "left", padding: "8px 10px", fontSize: 13, cursor: "pointer" }}
-                >
-                  🎤 Parler
-                </button>
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={onFileChosen} style={{ display: "none" }} />
-          </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-secondary"
+            aria-label="Joindre une photo"
+            style={{ width: 34, height: 34, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <PlusIcon />
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChosen} style={{ display: "none" }} />
+
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
+            onKeyDown={(e) => e.key === "Enter" && canSend && send()}
             className="field-input"
             placeholder={recording ? "Je t'écoute..." : "Pose ta question..."}
             style={{ flex: 1 }}
           />
-          <button onClick={send} disabled={busy} className="btn-primary">
-            {busy ? "..." : "Envoyer"}
+
+          <button
+            onClick={toggleVoice}
+            aria-label={recording ? "Arrêter l'enregistrement" : "Dicter un message"}
+            style={{
+              width: 34,
+              height: 34,
+              flexShrink: 0,
+              borderRadius: "50%",
+              border: recording ? "1px solid var(--danger)" : "1px solid var(--border)",
+              background: recording ? "rgba(244,63,94,0.12)" : "transparent",
+              color: recording ? "var(--danger)" : "var(--muted)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
+            {recording && (
+              <span
+                style={{
+                  position: "absolute",
+                  inset: -3,
+                  borderRadius: "50%",
+                  border: "1px solid var(--danger)",
+                  animation: "spark-pulse 1.4s infinite ease-out",
+                }}
+              />
+            )}
+            {recording ? <StopIcon /> : <MicIcon />}
+          </button>
+
+          <button
+            onClick={send}
+            disabled={!canSend}
+            aria-label="Envoyer"
+            className="btn-primary"
+            style={{ width: 34, height: 34, padding: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <SendIcon />
           </button>
         </div>
       </div>}
+      <style>{`
+        @keyframes spark-pulse {
+          0% { opacity: 0.6; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1.35); }
+        }
+      `}</style>
     </div>
   );
 }
