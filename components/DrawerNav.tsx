@@ -3,6 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 
+// Attention : "Dashboard" et "Quêtes" pointent vers des pages qui, au
+// chargement, vérifient s'il faut générer un nouveau lot de quêtes via
+// l'IA (donc un appel payant à Claude). Par défaut, Next.js précharge en
+// arrière-plan TOUT lien visible à l'écran — même juste affiché dans le
+// menu, jamais cliqué. Ça veut dire que le menu pouvait, à lui seul,
+// redéclencher une génération de quêtes payante à chaque fois qu'il
+// s'affichait, sans aucune action de l'utilisateur. C'est très
+// probablement la cause du bug de génération en boucle qui a consommé du
+// crédit API pour rien. `prefetch={false}` désactive ce préchargement
+// pour ces deux liens précis.
+const PAGES_WITH_PAID_SIDE_EFFECT = new Set(["/dashboard", "/dashboard/quests"]);
+
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Quêtes", href: "/dashboard/quests" },
@@ -85,6 +97,7 @@ export function DrawerNav() {
             key={item.href}
             href={item.href}
             onClick={() => setOpen(false)}
+            prefetch={!PAGES_WITH_PAID_SIDE_EFFECT.has(item.href)}
             style={{
               padding: "12px 10px",
               borderRadius: 8,
