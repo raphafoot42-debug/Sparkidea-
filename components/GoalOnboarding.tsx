@@ -39,7 +39,7 @@ export function GoalOnboarding({ ideaId, projectTitle }: { ideaId: string; proje
     <div className="panel" style={{ width: "100%", maxWidth: 560, padding: "28px 24px" }}>
       {!feedback ? (
         <>
-          <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 6 }}>👋 Bonjour</div>
+          <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Bienvenue</div>
           <h1 style={{ fontSize: 19, fontWeight: 600, marginBottom: 10, lineHeight: 1.35 }}>
             Je suis là pour t&apos;aider à faire avancer <em>{projectTitle}</em>. Avant de commencer :
           </h1>
