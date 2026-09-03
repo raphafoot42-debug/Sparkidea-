@@ -57,6 +57,14 @@ async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Tra
 
   const batch = await generateQuestBatch(schema, track, lastStageLabel, completedTitles, goals, otherTrackCompleted);
 
+  // Garde-fou anti-doublon : si une autre requête concurrente (ex. deux
+  // onglets ouverts, ou un préchargement Next.js) a généré un lot pendant
+  // que celui-ci tournait, on ne l'insère pas une deuxième fois. On a payé
+  // l'appel IA dans les deux cas si la course a eu lieu, mais au moins on
+  // n'empile pas des quêtes en double dans la base.
+  const stillPending = await db.quest.findMany({ where: { ideaId, track, status: "PENDING" } });
+  if (stillPending.length > 0) return;
+
   await db.quest.createMany({
     data: batch.quests.map((q, i) => ({
       ideaId,
