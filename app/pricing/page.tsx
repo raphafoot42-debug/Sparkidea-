@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
+import { QUEST_CHAT_MESSAGE_LIMITS } from "@/lib/plan-limits";
 
 const PLANS = [
   {
     id: "STARTER" as const,
     name: "Starter",
     price: "19€",
-    features: ["1 idée active", "Schéma complet + carte mentale", "30 messages IA / mois"],
+    features: ["1 idée active", "Schéma complet + carte mentale", `${QUEST_CHAT_MESSAGE_LIMITS.STARTER} messages IA / mois`],
     highlight: false,
   },
   {
@@ -19,7 +20,7 @@ const PLANS = [
       "Jusqu'à 5 idées actives",
       "Schéma complet + carte mentale",
       "Export PDF",
-      "50 messages IA / mois",
+      `${QUEST_CHAT_MESSAGE_LIMITS.PRO} messages IA / mois`,
     ],
     highlight: true,
   },
@@ -31,7 +32,7 @@ const PLANS = [
       "Jusqu'à 15 idées actives",
       "Suivi complet dans le temps + historique",
       "Export PDF",
-      "150 messages IA / mois",
+      `${QUEST_CHAT_MESSAGE_LIMITS.STUDIO} messages IA / mois`,
     ],
     highlight: false,
   },
