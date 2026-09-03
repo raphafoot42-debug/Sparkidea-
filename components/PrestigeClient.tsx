@@ -69,14 +69,14 @@ export function PrestigeClient({ ideaId }: { ideaId: string }) {
           border: "none",
         }}
       >
-        🏆 Objectif atteint — passer au niveau suivant →
+        Objectif atteint — passer au niveau suivant →
       </button>
     );
   }
 
   return (
     <div className="panel" style={{ width: "100%", maxWidth: 600, padding: "24px 22px", marginTop: 16 }}>
-      <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 6 }}>🏆 Prestige</div>
+      <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Niveau suivant</div>
       <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 14 }}>
         Tu as atteint ton objectif. Voici trois façons de gagner encore plus avec ce même projet :
       </h2>
