@@ -91,7 +91,7 @@ export function AllQuestsClient({
   // ça sonnerait comme une accusation permanente).
   const [confirmCount, setConfirmCount] = useState(0);
   const HONESTY_REMINDERS = [
-    "Sois honnête si tu veux vraiment gagner 💪",
+    "Sois honnête si tu veux vraiment gagner en efficacité.",
     "Une quête bien faite compte plus qu'une quête vite cochée.",
   ];
 
