@@ -10,7 +10,21 @@ const BodySchema = z.object({
   goal: z.string().min(3).max(600),
   targetMetric: z.enum(["clients", "revenue", "audience"]).optional(),
   targetValue: z.number().positive().optional(),
+  // Préférence de communication pour la piste marketing — pas besoin d'un
+  // champ dédié en base : stockée comme un deuxième "Goal" (pas d'appel IA
+  // pour celui-ci, coût nul), lu automatiquement par generateQuestBatch
+  // puisqu'il agrège déjà TOUS les Goal d'une idée dans le prompt. Ça évite
+  // que l'IA marketing propose une vidéo visage à quelqu'un qui veut rester
+  // anonyme, ou l'inverse.
+  communicationStyle: z.enum(["visage", "anonyme", "ia_generee", "pas_decide"]).optional(),
 });
+
+const COMMUNICATION_STYLE_LABELS: Record<string, string> = {
+  visage: "à l'aise pour apparaître en vidéo, montrer son visage",
+  anonyme: "préfère rester anonyme — voix off, écran, texte, pas de visage",
+  ia_generee: "préfère du contenu généré par IA (avatar IA, voix IA) plutôt qu'apparaître soi-même",
+  pas_decide: "pas encore décidé sur son style de communication — proposer plusieurs options avant d'imposer un format",
+};
 
 export async function POST(req: NextRequest) {
   let user;
@@ -63,6 +77,19 @@ export async function POST(req: NextRequest) {
       targetValue: parsed.data.targetValue,
     },
   });
+
+  if (parsed.data.communicationStyle) {
+    const label = COMMUNICATION_STYLE_LABELS[parsed.data.communicationStyle];
+    await db.goal.upsert({
+      where: { id: `${idea.id}-marketing-pref` },
+      update: { text: `Préférence de communication marketing : ${label}` },
+      create: {
+        id: `${idea.id}-marketing-pref`,
+        ideaId: idea.id,
+        text: `Préférence de communication marketing : ${label}`,
+      },
+    });
+  }
 
   return NextResponse.json({ ok: true, feedback });
 }
