@@ -7,8 +7,10 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { AllQuestsClient } from "@/components/AllQuestsClient";
 import { GoalOnboarding } from "@/components/GoalOnboarding";
 import { GoalStrip } from "@/components/GoalStrip";
+import { QuestChatClient } from "@/components/QuestChatClient";
 import { ensureQuestBatch } from "@/lib/quests";
 import { computeTechnicalProgress } from "@/lib/progress";
+import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function QuestsPage({
@@ -72,6 +74,10 @@ export default async function QuestsPage({
   });
 
   const technicalProgress = await computeTechnicalProgress(idea.id);
+  const aiMessageLimit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const aiUsedThisMonth = await db.usageLog.count({
+    where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
+  });
 
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
@@ -109,6 +115,14 @@ export default async function QuestsPage({
           }))}
         />
       </div>
+
+      {/* Même assistant IA que sur le dashboard principal — pas une copie
+          séparée, le même compagnon de projet, toujours à portée de main. */}
+      <QuestChatClient
+        ideaId={idea.id}
+        projectTitle={schema.projectTitle}
+        quota={{ used: aiUsedThisMonth, limit: aiMessageLimit }}
+      />
     </div>
   );
 }
