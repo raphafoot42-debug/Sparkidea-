@@ -13,6 +13,38 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gi
 // des choses qui n'en ont pas besoin (le bandeau du haut se glisse tout seul,
 // pas besoin d'une icône de poignée dessus).
 // ---------------------------------------------------------------------------
+function CopyIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3.5 10V3.5a1 1 0 0 1 1-1H10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+function DownloadIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2v8m0 0 3-3m-3 3-3-3M3 12.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Repère un bloc de code ``` ... ``` dans une réponse de l'IA et le
+// sépare du reste du texte — pour l'afficher dans le panneau externe
+// plutôt que noyé dans la bulle de discussion.
+function extractCodeBlock(text: string): { prose: string; language: string; code: string } | null {
+  const match = text.match(/```(\w*)\n([\s\S]*?)```/);
+  if (!match) return null;
+  const [full, language, code] = match;
+  const prose = text.replace(full, "").trim();
+  return { prose, language: language || "text", code: code.trim() };
+}
+
+const EXTENSION_BY_LANGUAGE: Record<string, string> = {
+  javascript: "js", typescript: "ts", tsx: "tsx", jsx: "jsx", python: "py",
+  html: "html", css: "css", json: "json", bash: "sh", sql: "sql", text: "txt",
+};
+
 function ChevronIcon({ direction }: { direction: "up" | "down" }) {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -118,6 +150,9 @@ export function QuestChatClient({
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [recording, setRecording] = useState(false);
   const [attachWarning, setAttachWarning] = useState<string | null>(null);
+  const [artifact, setArtifact] = useState<{ language: string; code: string } | null>(null);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
+  const [artifactCopied, setArtifactCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -263,12 +298,19 @@ export function QuestChatClient({
       setError(data.error ?? "Erreur.");
       return;
     }
-    setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+    const extracted = extractCodeBlock(data.reply);
+    if (extracted) {
+      setArtifact({ language: extracted.language, code: extracted.code });
+      setMessages((m) => [...m, { role: "assistant", text: extracted.prose || "Voilà, c'est dans le panneau à côté →" }]);
+    } else {
+      setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+    }
   }
 
   const canSend = !busy && (input.trim().length > 0 || !!attachment);
 
   return (
+    <>
     <div
       ref={cardRef}
       className="panel"
@@ -380,6 +422,29 @@ export function QuestChatClient({
                 )}
                 {m.text}
               </span>
+              {m.role === "assistant" && m.text && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(m.text);
+                    setCopiedMessageIndex(i);
+                    setTimeout(() => setCopiedMessageIndex((cur) => (cur === i ? null : cur)), 1500);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    marginTop: 3,
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--muted)",
+                    fontSize: 10.5,
+                    cursor: "pointer",
+                    padding: "2px 0",
+                  }}
+                >
+                  <CopyIcon /> {copiedMessageIndex === i ? "Copié" : "Copier"}
+                </button>
+              )}
             </div>
           ))}
           {busy && <ThinkingBubble />}
@@ -415,13 +480,26 @@ export function QuestChatClient({
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChosen} style={{ display: "none" }} />
 
-          <input
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && canSend && send()}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+            onKeyDown={(e) => {
+              // Entrée envoie, Maj+Entrée passe à la ligne — comme Claude,
+              // pour pouvoir écrire un vrai paragraphe sans envoyer à
+              // chaque retour à la ligne.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (canSend) send();
+              }
+            }}
+            rows={1}
             className="field-input"
             placeholder={recording ? "Je t'écoute..." : "Pose ta question..."}
-            style={{ flex: 1 }}
+            style={{ flex: 1, resize: "none", lineHeight: 1.4, paddingTop: 8, paddingBottom: 8, maxHeight: 120, overflowY: "auto" }}
           />
 
           <button
@@ -474,5 +552,61 @@ export function QuestChatClient({
         }
       `}</style>
     </div>
+
+    {/* Panneau externe — reste ouvert à côté de la fenêtre de chat quand
+        l'IA génère du code, comme les "artifacts" de Claude. Sur mobile,
+        pas assez de place à côté : il s'affiche empilé sous le chat. */}
+    {artifact && !minimized && (
+      <div
+        className="panel"
+        style={
+          isMobile
+            ? { position: "fixed", left: 12, right: 12, bottom: "78vh", maxHeight: "20vh", zIndex: 21, padding: 0, display: "flex", flexDirection: "column", overflow: "hidden" }
+            : { position: "fixed", left: Math.max(12, pos.x - 340), top: pos.y, width: 320, maxHeight: 420, zIndex: 21, padding: 0, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", overflow: "hidden" }
+        }
+      >
+        <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.04em" }}>{artifact.language}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(artifact.code);
+                setArtifactCopied(true);
+                setTimeout(() => setArtifactCopied(false), 1500);
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 4, background: "transparent", border: "none", color: "var(--muted)", fontSize: 11, cursor: "pointer" }}
+            >
+              <CopyIcon /> {artifactCopied ? "Copié" : "Copier"}
+            </button>
+            <button
+              onClick={() => {
+                const ext = EXTENSION_BY_LANGUAGE[artifact.language] || "txt";
+                const blob = new Blob([artifact.code], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `spark-idea.${ext}`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 4, background: "transparent", border: "none", color: "var(--muted)", fontSize: 11, cursor: "pointer" }}
+            >
+              <DownloadIcon /> Télécharger
+            </button>
+            <button
+              onClick={() => setArtifact(null)}
+              aria-label="Fermer le panneau"
+              style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", display: "flex" }}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
+        <pre style={{ margin: 0, padding: 12, fontSize: 12, lineHeight: 1.5, overflow: "auto", fontFamily: "ui-monospace, monospace" }}>
+          <code>{artifact.code}</code>
+        </pre>
+      </div>
+    )}
+    </>
   );
 }
