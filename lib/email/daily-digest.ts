@@ -35,7 +35,7 @@ export function buildDailyDigestEmail(params: {
             `<li style="margin-bottom:8px;"><strong>${q.track === "marketing" ? "Marketing" : "Technique"}</strong> — ${q.title}</li>`
         )
         .join("")
-    : `<li>Aucune quête en attente — direction ton dashboard pour en générer de nouvelles.</li>`;
+    : `<li>T'inquiète, tes prochaines quêtes t'attendent déjà — ouvre ton dashboard, elles sont prêtes.</li>`;
 
   const subject = ideaTitle
     ? `Aujourd'hui, fais avancer ${ideaTitle}`
