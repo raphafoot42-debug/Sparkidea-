@@ -38,7 +38,7 @@ export default function LoginPage() {
       <form
         onSubmit={handleSubmit}
         className="panel"
-        style={{ position: "relative", zIndex: 2, width: 340, padding: "30px 26px" }}
+        style={{ position: "relative", zIndex: 2, width: 340, maxWidth: "90vw", padding: "30px 26px" }}
       >
         <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14 }}>◆ Spark Idea</div>
         <h1 style={{ textAlign: "center", fontSize: 17, fontWeight: 600, margin: "12px 0 4px" }}>
@@ -75,9 +75,8 @@ export default function LoginPage() {
         </button>
 
         <div style={{ textAlign: "center", fontSize: 11.5, color: "var(--muted)", marginTop: 12 }}>
-          Mot de passe oublié ?{" "}
-          <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ color: "var(--line)" }}>
-            Contacte-nous sur Telegram
+          <a href="/forgot-password" style={{ color: "var(--line)" }}>
+            Mot de passe oublié ?
           </a>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
