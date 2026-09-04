@@ -100,26 +100,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let updatedSchema = currentSchema;
-    if (result.newNode) {
-      updatedSchema = {
-        ...currentSchema,
-        nodes: [...currentSchema.nodes, result.newNode],
-      };
-      await db.idea.update({
-        where: { id: idea.id },
-        data: { schemaData: JSON.stringify(updatedSchema) },
-      });
-      await db.historyEntry.create({
-        data: {
-          ideaId: idea.id,
-          type: "schema_update",
-          summary: `Ajout au schéma : "${result.newNode.label}"`,
-        },
-      });
-    }
-
-    return NextResponse.json({ reply: result.reply, schema: updatedSchema });
+    // Changement de comportement volontaire : avant, un "newNode" détecté
+    // par l'IA était appliqué directement au schéma, sans que l'utilisateur
+    // ait rien validé. Décidé avec Raphaël : l'IA doit maintenant PROPOSER
+    // le changement, pas l'appliquer elle-même — la confirmation se fait
+    // côté utilisateur, via /api/chat/apply, seulement s'il clique "Appliquer".
+    return NextResponse.json({ reply: result.reply, proposedNode: result.newNode ?? null });
   } catch (err) {
     console.error("Erreur chat IA :", err);
     return NextResponse.json({ error: "L'IA n'a pas pu répondre, réessaie." }, { status: 500 });
