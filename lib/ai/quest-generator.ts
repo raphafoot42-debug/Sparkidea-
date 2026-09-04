@@ -1,92 +1,47 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import type { SchemaResult } from "./schema-generator";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }); 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+ 
+// ---------------------------------------------------------------------------
+// Deux pistes de quêtes, indépendantes et parallèles :
+// - "technique" : construire le produit/service (MVP → lancement → croissance)
+// - "marketing" : trouver des clients / de la visibilité (préparation →
+//   diffusion → scale)
+// Chaque piste avance par lots de 1 à 5 quêtes — le nombre n'est plus fixe :
+// l'IA décide combien sont vraiment utiles maintenant pour ce projet précis,
+// plutôt qu'un chiffre identique imposé des deux côtés en permanence. Pas de fin fixe :
+// une fois la piste bien avancée, l'IA continue de proposer des quêtes
+// pertinentes pour ce stade (croissance continue, optimisation, etc).
+// ---------------------------------------------------------------------------
+export type Track = "marketing" | "technique";
 
-// ---------------------------------------------------------------------------
-// LA GRILLE DE CRITÈRES — validée avec Raphaël. C'est le cœur du produit.
-// L'IA ne "réfléchit" jamais librement : elle remplit cette grille fixe pour
-// chaque idée, ce qui garantit une analyse cohérente et reproductible plutôt
-// qu'un texte différent à chaque génération.
-// ---------------------------------------------------------------------------
-export const CRITERIA = [
-  {
-    key: "probleme_resolu",
-    label: "Problème résolu",
-    question: "À quel point la douleur est claire et fréquente chez la cible ?",
-  },
-  {
-    key: "cible",
-    label: "Cible",
-    question: "La cible est-elle facile à identifier et à atteindre ?",
-  },
-  {
-    key: "concurrence",
-    label: "Concurrence",
-    question: "Quelle concurrence directe ou indirecte existe déjà ?",
-  },
-  {
-    key: "differenciation",
-    label: "Différenciation possible",
-    question: "Quel angle pourrait démarquer cette idée des autres ?",
-  },
-  {
-    key: "complexite",
-    label: "Complexité de réalisation",
-    question: "Est-ce simple à construire seul, ou technique/lourd ?",
-  },
-  {
-    key: "modele_revenu",
-    label: "Modèle de revenu",
-    question: "Le modèle de revenu est-il évident ou reste-t-il à inventer ?",
-  },
-] as const;
-
-// ---------------------------------------------------------------------------
-// Format de sortie forcé (JSON strict). On valide la réponse de l'IA avec Zod :
-// si jamais Claude renvoie un format inattendu, on le détecte immédiatement au
-// lieu de laisser une erreur silencieuse remonter jusqu'à l'utilisateur.
-// ---------------------------------------------------------------------------
-export const NodeSchema = z.object({
-  id: z.string(),
-  type: z.enum(["todo", "risk", "win"]),
-  label: z.string().max(80),
-  comment: z.string().max(400),
-  // Contenu du panneau "Voir plus" : explication détaillée, méthodes et
-  // étapes concrètes pour ce point précis. Plus long que "comment", qui
-  // reste la version courte affichée directement sur le schéma.
-  detail: z.string().max(1200),
+const QuestBatchSchema = z.object({
+  stageLabel: z.string().max(40),
+  quests: z
+    .array(
+      z.object({
+        title: z.string().max(90),
+        // Relevé à 1500 (au lieu de 600) : une quête doit vraiment aider,
+        // pas juste pointer une direction en une phrase. Voir TRACK_GUIDANCE
+        // ci-dessous pour ce qu'on exige dans ce champ.
+        detail: z.string().max(1500),
+      })
+    )
+    // Avant : toujours exactement 3, sur les deux pistes, systématiquement.
+    // Décidé avec Raphaël : le nombre de quêtes par lot doit refléter ce qui
+    // compte VRAIMENT maintenant pour rapporter de l'argent au client, pas
+    // un chiffre arbitraire identique des deux côtés en permanence. L'IA
+    // décide elle-même combien sont utiles (voir la règle dédiée plus bas).
+    .min(1)
+    .max(5),
 });
 
-const SchemaResultSchema = z.object({
-  projectTitle: z.string().max(40),
-  criteria: z.record(
-    z.string(),
-    z.object({
-      score: z.number().min(1).max(5),
-      note: z.string().max(200),
-    })
-  ),
-  overallScore: z.number().min(1).max(10),
-  nodes: z.array(NodeSchema).min(3).max(8),
-});
-
-export type SchemaResult = z.infer<typeof SchemaResultSchema>;
-
-// ---------------------------------------------------------------------------
-// Parsing tolérant : même si le prompt interdit les balises markdown, il
-// arrive que le modèle en ajoute quand même (```json ... ```) ou laisse un
-// espace/texte avant ou après le JSON. On nettoie avant de parser plutôt que
-// de faire planter toute l'analyse pour un détail cosmétique.
-// ---------------------------------------------------------------------------
 function extractJson(raw: string): string {
   let text = raw.trim();
-  // Retire les balises ```json ... ``` ou ``` ... ``` si présentes
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenceMatch) {
-    text = fenceMatch[1].trim();
-  }
-  // Si du texte traîne avant/après l'objet JSON, on garde juste { ... }
+  if (fenceMatch) text = fenceMatch[1].trim();
   const firstBrace = text.indexOf("{");
   const lastBrace = text.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -95,299 +50,126 @@ function extractJson(raw: string): string {
   return text;
 }
 
-// ---------------------------------------------------------------------------
-// Quelques exemples déjà analysés à la main, donnés à l'IA en référence
-// (few-shot) pour calibrer son niveau de précision et son ton — plutôt que
-// de la laisser improviser un style à chaque fois.
-// À enrichir avec de vrais exemples validés par Raphaël avant la mise en prod.
-// ---------------------------------------------------------------------------
-const FEW_SHOT_EXAMPLE = `
-Exemple d'idée : "Une appli mobile qui aide les artisans à faire leurs devis en 2 minutes depuis le chantier."
+export type QuestBatchResult = {
+  stageLabel: string;
+  quests: { title: string; detail: string }[];
+};
 
-Exemple d'analyse attendue (format et niveau de précision à reproduire) :
-{
-  "projectTitle": "DevisRapide",
-  "criteria": {
-    "probleme_resolu": { "score": 5, "note": "Douleur très fréquente et concrète : les artisans perdent un temps réel sur les devis papier ou tableur." },
-    "cible": { "score": 4, "note": "Cible identifiable (artisans du bâtiment) mais dispersée, pas toujours à l'aise avec le digital." },
-    "concurrence": { "score": 2, "note": "Des outils existent déjà (Obat, Facture.net) mais souvent pensés desktop, pas mobile-first." },
-    "differenciation": { "score": 4, "note": "L'angle '2 minutes, sur le chantier, mobile only' peut être un vrai argument unique." },
-    "complexite": { "score": 4, "note": "Faisable seul pour une V1 avec un seul type de devis, pas besoin de tout couvrir d'entrée." },
-    "modele_revenu": { "score": 4, "note": "Abonnement mensuel évident, comparable aux outils de facturation déjà payés par ce public." }
-  },
-  "overallScore": 7.2,
-  "nodes": [
-    { "id": "n1", "type": "todo", "label": "Construire l'app mobile (devis en 2 min)", "comment": "Première brique : commence par un seul type de devis, pas tous les cas dès le départ.", "detail": "Étapes concrètes : 1) Choisis UN seul type de devis fréquent (ex: pose de placo) et fais uniquement celui-là en V1. 2) Utilise un framework mobile rapide (Flutter ou React Native) pour sortir un prototype en 2-3 semaines. 3) Le formulaire doit tenir en 4-5 champs max (surface, matériaux, main d'œuvre, marge) — chaque champ en trop fait fuir un artisan sur le chantier. 4) Génère un PDF propre en un clic, envoyable par SMS ou mail direct depuis l'app. 5) Teste avec 3 artisans réels avant d'ajouter le moindre autre type de devis." },
-    { "id": "n2", "type": "todo", "label": "Trouver 10 premiers artisans testeurs", "comment": "Vise des groupes Facebook ou forums de métier, c'est là que ta cible discute déjà de ce problème.", "detail": "Méthodes concrètes : 1) Rejoins 5-10 groupes Facebook d'artisans (bâtiment, plomberie, électricité) et observe une semaine avant de poster. 2) Poste un message honnête : tu construis un outil pour ce problème précis, tu cherches des retours, pas des ventes. 3) Propose l'accès gratuit à vie aux 10 premiers en échange de retours réguliers. 4) Alternative : contacte directement des artisans via leur fiche Google (avis, téléphone) dans ta ville, l'approche en personne convertit mieux qu'en ligne pour ce public. 5) Un appel de 15 min avec chacun vaut plus que 50 réponses à un formulaire." },
-    { "id": "n3", "type": "risk", "label": "Concurrence déjà installée", "comment": "Le risque n'est pas leur existence, c'est qu'ils sont plus complets — reste focalisé sur ta niche mobile.", "detail": "Comment gérer ce risque concrètement : 1) Ne cherche jamais à égaler leur nombre de fonctionnalités, c'est un piège qui te ralentit sans te différencier. 2) Positionne-toi explicitement sur \\"mobile, sur le chantier, en 2 minutes\\" dans toute ta communication — c'est ce qu'ils ne font pas bien. 3) Regarde leurs avis 1-2 étoiles (Trustpilot, Google) : les plaintes récurrentes sont tes opportunités de différenciation direktes. 4) Si un artisan te dit \\"j'utilise déjà X\\", demande-lui ce qui l'embête avec X plutôt que d'argumenter — c'est ton meilleur insight produit." },
-    { "id": "n4", "type": "risk", "label": "Devis = engagement légal, confiance à construire", "comment": "Ajoute une mention claire de conformité dès la page d'accueil pour rassurer.", "detail": "Points à traiter concrètement : 1) Ajoute une mention visible \\"devis conforme aux mentions légales obligatoires (bâtiment)\\" sur la page d'accueil et dans le PDF généré. 2) Vérifie les mentions obligatoires pour un devis dans le secteur bâtiment (durée de validité, TVA, assurance décennale) et intègre-les par défaut dans le template. 3) Précise clairement que l'app aide à générer le document mais que l'artisan reste responsable de son contenu final — évite toute ambiguïté sur qui est engagé légalement. 4) Un badge \\"vos données restent privées\\" rassure aussi, ce public est méfiant du cloud par défaut." },
-    { "id": "n5", "type": "win", "label": "Définir le prix de l'abonnement", "comment": "Regarde ce que les artisans payent déjà pour un logiciel de facturation classique pour te positionner.", "detail": "Méthode concrète pour fixer le prix : 1) Recense 3-4 concurrents directs (Obat, Facture.net, Sinao) et note leur prix mensuel de base — sers-t'en comme ancrage, pas comme copie. 2) Positionne-toi légèrement en dessous au lancement (ex: 12-15€/mois) pour compenser le fait que tu es nouveau et moins complet. 3) Prévois un palier gratuit limité (ex: 3 devis/mois) pour lever la friction à l'essai, plutôt qu'un essai limité dans le temps. 4) Augmente le prix progressivement une fois que tu as des retours positifs solides (avis, bouche-à-oreille) — ne fige pas le prix trop tôt." }
-  ]
-}
+// La technique de "chauffe de compte" ci-dessous est une vraie méthode
+// professionnelle de croissance sur les réseaux sociaux — l'IA doit la
+// connaître et l'ADAPTER quand c'est pertinent pour le projet (pas la
+// recopier telle quelle à chaque fois, seulement quand créer une présence
+// sociale fait sens pour CE projet précis) :
+const ACCOUNT_WARMING_TECHNIQUE = `
+Technique de "chauffe" de compte avant de poster (à adapter si pertinent, ne
+pas imposer si le projet n'a pas besoin de réseaux sociaux) :
+Jour 1 : crée le compte avec juste un email et un mot de passe. Ne poste rien,
+  ne remplis pas le profil, n'ajoute aucune photo.
+Jours 2-3 : laisse le compte totalement inactif, ne l'ouvre même pas.
+Jours 3-4 : commence à ouvrir l'appli et à consommer du contenu de la niche
+  (regarder des vidéos, liker, suivre quelques comptes), par sessions courtes
+  espacées (ex: toutes les 15-30 minutes), sans jamais poster.
+Jour 4-5 : complète le profil (photo, bio) puis poste un premier contenu
+  simple, avec une description soignée.
+L'objectif : que l'algorithme voit un compte qui se comporte comme un vrai
+utilisateur avant de commencer à publier, pour un meilleur reach dès le début.
 `.trim();
 
-function buildSystemPrompt(): string {
-  const criteriaList = CRITERIA.map(
-    (c) => `- "${c.key}" (${c.label}) : ${c.question}`
-  ).join("\n");
+const VIRALITY_TOOLBOX = `
+Techniques de croissance professionnelles (à choisir et adapter selon le
+projet, jamais à empiler toutes en même temps) :
+- Build in public : montrer la construction en cours (avant/après, captures
+  d'écran de progression) plutôt qu'un produit fini seulement.
+- Accroche des 3 premières secondes : la vidéo doit annoncer la
+  transformation concrète dès la première phrase, sans introduction.
+- Piliers de contenu tournants : alterner démonstration / coulisses /
+  résultat client plutôt que répéter le même format à chaque fois.
+- Liste d'attente à rareté réelle : accès limité à un nombre précis et
+  vrai de places, jamais un chiffre inventé.
+- Recyclage de contenu : redécouper une bonne vidéo en plusieurs formats
+  (court, long, texte) plutôt que produire du contenu neuf à chaque fois.
+- Amorçage communautaire ciblé : poster d'abord dans 3-4 communautés de
+  niche avant de viser large.
+`.trim();
 
-  return `Tu es le moteur d'analyse du produit "Spark Idea". Un utilisateur te donne une idée de projet en une ou deux phrases. Ton rôle N'EST PAS de répondre librement : tu dois remplir une grille FIXE de 6 critères, toujours les mêmes, de façon cohérente et reproductible.
+const TRACK_GUIDANCE: Record<Track, string> = {
+  technique: `Piste TECHNIQUE : construire le produit ou service en lui-même. Progresse naturellement de "sortir un premier prototype minimal" vers "l'améliorer avec les vrais retours utilisateurs" puis "l'optimiser une fois qu'il a des utilisateurs actifs". Reste concret : quoi construire exactement, avec quels outils, dans quel ordre.
 
-CRITÈRES À REMPLIR (exactement ces 6 clés, dans cet ordre) :
-${criteriaList}
+FORMAT OBLIGATOIRE du champ "detail" pour CHAQUE quête technique : aide vraiment, ne te contente jamais d'une seule phrase de direction vague. Structure toujours en deux parties :
+1. Un court paragraphe qui explique CE qu'il faut faire et POURQUOI, concrètement, pour ce projet précis (pas un conseil générique).
+2. Un prompt prêt à copier-coller vers l'IA du projet, introduit par exactement la ligne "PROMPT À UTILISER AVEC TON IA :" suivi du texte du prompt entre guillemets. Ce prompt doit être écrit à la première personne comme si l'utilisateur le tapait lui-même, suffisamment précis et contextualisé pour que l'IA du projet puisse répondre utilement tout de suite.`,
+  marketing: `Piste MARKETING : trouver de la visibilité et des clients pour ce projet précis.
+
+RÈGLE ABSOLUE : si les objectifs de l'utilisateur (fournis plus bas) précisent une préférence de communication (apparaître en vidéo / rester anonyme / contenu généré par IA / pas décidé), tu DOIS la respecter strictement — ne propose JAMAIS un format qui l'ignore. Si aucune préférence n'est fournie, propose 2-3 formats alternatifs dans le detail plutôt que d'en imposer un seul.
+
+Si une présence sur les réseaux sociaux est pertinente pour ce projet, tu PEUX t'appuyer sur cette technique de préparation de compte (à adapter, pas à copier mot pour mot) :\n\n${ACCOUNT_WARMING_TECHNIQUE}\n\nD'autres techniques de croissance à piocher et adapter selon pertinence (jamais à imposer telles quelles) :\n${VIRALITY_TOOLBOX}\n\nMais reste toujours pertinent pour LE PROJET : si un autre canal (bouche-à-oreille local, forums, groupes, prospection directe) est plus adapté, propose-le à la place. Progresse de "préparer le terrain" vers "diffuser activement" puis "optimiser ce qui convertit le mieux".
+
+FORMAT OBLIGATOIRE du champ "detail" pour CHAQUE quête marketing : aide vraiment, jamais une seule phrase vague. Explique concrètement quoi faire, dans quel ordre, avec quel angle précis pour CE projet, en respectant la préférence de communication ci-dessus.`,
+};
+
+// completedTitles : titres déjà faits sur CETTE piste précise, pour ne jamais
+// se répéter et voir la progression réelle.
+export async function generateQuestBatch(
+  schema: SchemaResult,
+  track: Track,
+  lastStageLabel: string | null,
+  completedTitles: string[],
+  goals: string[],
+  otherTrackCompleted: string[] = []
+): Promise<QuestBatchResult> {
+  const historyBlock =
+    completedTitles.length > 0
+      ? `Quêtes déjà faites par l'utilisateur sur cette piste "${track}", dans l'ordre :\n${completedTitles
+          .map((t, i) => `${i + 1}. ${t}`)
+          .join("\n")}\n\nÉtape précédente : "${lastStageLabel}". Ne répète jamais une quête déjà faite. Enchaîne logiquement dessus — l'étape doit progresser, pas boucler.`
+      : `Aucune quête faite pour l'instant sur cette piste : c'est la toute première série.`;
+
+  const goalBlock = goals.length > 0
+    ? `OBJECTIFS FIXÉS PAR L'UTILISATEUR (fil rouge de toutes les quêtes, marketing ET technique) :\n${goals
+        .map((goal, index) => `${index + 1}. "${goal}"`)
+        .join("\n")}\nChaque quête de ce lot doit faire avancer concrètement vers ces objectifs sans disperser l'utilisateur : priorise les actions les plus importantes.`
+    : `L'utilisateur n'a pas encore précisé de but chiffré : reste générique mais oriente déjà vers la monétisation.`;
+
+  const otherTrack: Track = track === "marketing" ? "technique" : "marketing";
+  const otherTrackBlock =
+    otherTrackCompleted.length > 0
+      ? `Progression sur l'AUTRE piste ("${otherTrack}"), déjà faite :\n${otherTrackCompleted
+          .map((t, i) => `${i + 1}. ${t}`)
+          .join("\n")}`
+      : `Rien de fait pour l'instant sur l'autre piste ("${otherTrack}").`;
+
+  const productReadinessRule =
+    track === "marketing"
+      ? `\n7. GARDE-FOU IMPORTANT : ne propose JAMAIS une quête qui suppose que le produit/service existe déjà et est utilisable (ex: "trouve tes 5 premiers clients", "démarche des entreprises pour vendre", "récolte des avis clients") tant que la piste technique (voir ci-dessus) ne montre pas qu'une version utilisable existe. Si ce n'est pas encore le cas, oriente le marketing vers ce qui ne nécessite PAS de produit fini : valider l'idée auprès de vraies personnes, construire une audience, une liste d'attente, du contenu qui prépare le lancement. Vendre un produit qui n'existe pas encore, c'est ce qu'on veut éviter à tout prix.`
+      : "";
+
+  const system = `Tu es le moteur de quêtes du produit "Spark Idea". Les objectifs de l'utilisateur sont le fil rouge de son projet "${schema.projectTitle}". Ton rôle : le faire avancer sur la piste "${track}", une quête concrète à la fois.
+
+PROJET : ${schema.projectTitle}
+ANALYSE DÉJÀ FAITE :
+${schema.nodes.map((n) => `- [${n.type}] ${n.label} : ${n.comment}`).join("\n")}
+
+${TRACK_GUIDANCE[track]}
+
+${goalBlock}
+
+${otherTrackBlock}
+
+${historyBlock}
 
 RÈGLES STRICTES :
-1. Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, sans balises markdown (pas de \`\`\`json).
-2. Chaque critère reçoit un score de 1 à 5 et une note courte (une phrase, factuelle, pas de blabla).
-3. "overallScore" est TA synthèse sur 10, cohérente avec les 6 scores individuels (ne l'invente pas au hasard).
-4. "nodes" contient entre 3 et 6 points concrets à afficher sur le schéma visuel de l'utilisateur : mélange de type "todo" (étapes à faire), "risk" (points de vigilance), et éventuellement "win" (opportunités). Chaque nœud a :
-   - un label court (moins de 10 mots)
-   - un "comment" d'1-2 phrases, écrit à la deuxième personne ("tu"), concret et actionnable — jamais générique (c'est ce qui s'affiche directement sur le schéma)
-   - un "detail" plus long (3 à 5 phrases ou étapes numérotées), qui approfondit ce point précis avec des méthodes concrètes et actionnables — c'est ce qui s'affiche quand l'utilisateur clique sur "Voir plus". Toujours à la deuxième personne, jamais générique, jamais une simple reformulation du "comment".
-5. "projectTitle" est un nom court et mémorable pour le projet (2-3 mots maximum), pas juste une reformulation de la phrase de l'utilisateur.
-6. Reste factuel et honnête, y compris sur les points faibles — ne survends jamais une idée pour faire plaisir.
-
-${FEW_SHOT_EXAMPLE}
-
-Réponds maintenant pour la nouvelle idée fournie, en respectant exactement ce format.`;
-}
-
-// ---------------------------------------------------------------------------
-// Étape de clarification AVANT le schéma final (décidé avec Raphaël : l'IA
-// pose ses questions d'abord, le schéma complet n'arrive qu'une fois qu'elle
-// a assez d'infos — pas de "brouillon" instantané suivi de questions après).
-// ---------------------------------------------------------------------------
-export type QaTurn = { question: string; answer: string };
-
-import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
-
-// Plafond dur côté code (pas juste une consigne au modèle) : au-delà de ce
-// nombre de questions, on force la génération du schéma final quoi qu'il
-// arrive — évite une conversation gratuite illimitée avant inscription.
-export { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
-
-const ClarifyResultSchema = z.union([
-  z.object({ done: z.literal(false), question: z.string().max(300) }),
-  z.object({ done: z.literal(true) }),
-]);
-
-// ---------------------------------------------------------------------------
-// Contrôle qualité des réponses pendant les questions de clarification —
-// décidé avec Raphaël : une réponse pas claire/vide/hors-sujet est refusée
-// avec une explication, pour garantir un schéma (et donc des quêtes) 100%
-// propres en sortie, plutôt que de laisser passer n'importe quoi.
-// ---------------------------------------------------------------------------
-const ClarityResultSchema = z.union([
-  z.object({ clear: z.literal(true) }),
-  z.object({ clear: z.literal(false), reason: z.string().max(150) }),
-]);
-
-export async function checkAnswerClarity(
-  question: string,
-  answer: string
-): Promise<{ clear: boolean; reason?: string }> {
-  // Filtre rapide côté code avant même d'appeler l'IA : évite un appel pour
-  // une réponse manifestement vide.
-  if (answer.trim().length < 3) {
-    return { clear: false, reason: "Ta réponse est trop courte, développe un peu." };
-  }
-
-  const system = `Question posée au client : "${question}"
-Réponse donnée : "${answer}"
-
-Juge si cette réponse est exploitable pour construire une analyse professionnelle sérieuse : elle doit être concrète, sur le sujet de la question, et apporter une vraie information (pas "je sais pas", pas une réponse qui ignore la question, pas juste répéter la question).
-
-Réponds UNIQUEMENT en JSON, sans texte avant/après :
-- Si la réponse est exploitable, même courte : {"clear": true}
-- Sinon : {"clear": false, "reason": "..."} avec une phrase courte, directe, à la deuxième personne, qui explique quoi préciser (ex: "Sois plus précis sur qui sont tes clients exactement.")
-
-Sois raisonnable : n'exige pas un roman, juste une info réelle et sur le sujet.`;
+1. Réponds UNIQUEMENT en JSON valide, sans texte avant/après, sans balises markdown.
+2. "stageLabel" : nomme l'étape actuelle en 2-4 mots (ex: "Préparation du compte", "Premiers utilisateurs", "Optimisation du prix").
+3. Génère ENTRE 1 ET 5 quêtes, jamais un nombre fixe imposé — décide toi-même combien sont réellement utiles MAINTENANT sur cette piste précise, pour CE projet, à ce stade précis. S'il y a peu de choses pertinentes à faire sur cette piste en ce moment (ex: le produit n'existe pas encore côté marketing, voir la règle dédiée plus bas), génère-en moins (1 ou 2) plutôt que de remplir artificiellement. S'il y a beaucoup à faire, va jusqu'à 5. Priorité absolue sur les deux pistes : rapprocher le client de son PREMIER REVENU réel le plus vite possible — chaque quête générée doit pouvoir se justifier par "voici comment ça rapproche concrètement de vendre ou de gagner de l'argent", même indirectement (construire l'audience qui achètera, par exemple). Une fois le premier revenu obtenu, les quêtes doivent naturellement viser à l'augmenter et à le stabiliser, pas repartir sur des bases déjà acquises.
+4. Chaque quête a un "title" court (moins de 12 mots, verbe d'action) et un "detail" TRÈS concret : étapes numérotées précises, avec le nom des outils/sites/plateformes exacts à utiliser quand c'est pertinent (pas "utilise un outil de design", mais "utilise Canva, gratuit, modèle Story Instagram"), écrit à la deuxième personne ("tu"), spécifique à CE projet — jamais générique. TOUJOURS terminer le "detail" par 1-2 phrases qui expliquent POURQUOI cette quête compte (ce que ça débloque ou améliore concrètement pour le projet) — l'utilisateur doit comprendre le sens de l'étape, pas juste l'exécuter à l'aveugle.
+5. Reste réaliste sur ce qu'une personne seule peut faire en une journée par quête : chaque quête doit être faisable en environ UNE HEURE de travail (pas une demi-journée). Si une étape est trop grosse pour tenir en une heure, découpe-la en plusieurs quêtes successives plutôt que d'en faire une seule trop longue — l'utilisateur a une vie à côté, l'objectif est une progression quotidienne tenable, pas un sprint épuisant.
+6. Format : { "stageLabel": "...", "quests": [ { "title": "...", "detail": "..." } ] }${productReadinessRule}`;
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 150,
+    max_tokens: 2500,
     system,
-    messages: [{ role: "user", content: "Juge et réponds au format demandé." }],
-  });
-
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : en cas de doute technique, on laisse passer plutôt
-    // que de bloquer injustement l'utilisateur.
-    return { clear: true };
-  }
-
-  try {
-    const parsed = ClarityResultSchema.parse(JSON.parse(extractJson(textBlock.text)));
-    return parsed.clear ? { clear: true } : { clear: false, reason: parsed.reason };
-  } catch (err) {
-    console.error("[checkAnswerClarity] Réponse IA invalide, on laisse passer :", textBlock.text, err);
-    return { clear: true };
-  }
-}
-
-export async function askClarifyingQuestion(
-  ideaText: string,
-  qaHistory: QaTurn[]
-): Promise<{ done: boolean; question?: string }> {
-  const historyText =
-    qaHistory.length === 0
-      ? "(aucune question posée pour l'instant)"
-      : qaHistory.map((t, i) => `Q${i + 1}: ${t.question}\nR${i + 1}: ${t.answer}`).join("\n\n");
-
-  const system = `Tu es le moteur d'analyse du produit "Spark Idea". Un utilisateur te donne une idée de projet. Avant de produire l'analyse finale (grille de 6 critères), tu dois d'abord poser des questions de clarification ciblées — jamais générer l'analyse sur une simple phrase de départ.
-
-Idée de départ : "${ideaText}"
-
-Historique des questions déjà posées et réponses reçues :
-${historyText}
-
-RÈGLES :
-1. Si tu as déjà assez d'infos pour remplir sérieusement les 6 critères (problème résolu, cible, concurrence, différenciation, complexité, modèle de revenu), réponds : {"done": true}
-2. Sinon, pose UNE SEULE question ciblée (la plus utile parmi ce qui manque), à la deuxième personne ("tu"), courte et concrète — jamais une question générique du style "parle-moi de ton projet". Privilégie les questions OUVERTES qui poussent à développer (pas de simple oui/non) : demande le "comment", le "pourquoi", ou un exemple concret plutôt qu'un choix binaire — c'est ce qui donne à l'IA la matière pour un schéma vraiment précis. Réponds : {"done": false, "question": "..."}
-3. Après ${MAX_CLARIFYING_QUESTIONS} questions déjà posées, tu DOIS répondre {"done": true} même si tout n'est pas parfaitement clair — mieux vaut avancer avec ce qu'on a.
-4. Réponds UNIQUEMENT en JSON valide, sans texte avant/après, sans balises markdown.`;
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 300,
-    system,
-    messages: [{ role: "user", content: "Décide et réponds au format demandé." }],
-  });
-
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : si l'IA ne répond rien d'exploitable, on force la
-    // génération plutôt que de bloquer l'utilisateur.
-    return { done: true };
-  }
-
-  try {
-    const parsed = ClarifyResultSchema.parse(JSON.parse(extractJson(textBlock.text)));
-    return parsed.done ? { done: true } : { done: false, question: parsed.question };
-  } catch (err) {
-    console.error("[askClarifyingQuestion] Réponse IA invalide, on force la génération :", textBlock.text, err);
-    return { done: true };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Verdict personnalisé et honnête, affiché sur /result juste après le
-// schéma, avant même l'inscription (décidé avec Raphaël) : l'IA se
-// prononce honnêtement sur CE projet précis à partir des vraies réponses
-// données pendant les questions de clarification — jamais de promesse de
-// résultat/gain, dit franchement si le potentiel est limité, et propose une
-// piste alternative cohérente avec le profil de l'utilisateur.
-// ---------------------------------------------------------------------------
-export async function generateVerdict(schema: SchemaResult, qaHistory: QaTurn[]): Promise<string> {
-  const answersText =
-    qaHistory.length === 0
-      ? "(aucune réponse donnée)"
-      : qaHistory.map((t) => `- ${t.question} → ${t.answer}`).join("\n");
-
-  const criteriaText = Object.entries(schema.criteria)
-    .map(([key, c]) => `- ${key} : ${c.score}/5 — ${c.note}`)
-    .join("\n");
-
-  const system = `Tu es le conseiller de Spark Idea. Voici l'analyse déjà faite du projet "${schema.projectTitle}" :
-
-Score global : ${schema.overallScore}/10
-${criteriaText}
-
-Réponses données par l'utilisateur pendant les questions de clarification :
-${answersText}
-
-Rédige un verdict honnête et personnalisé (120 à 180 mots, texte brut, pas de JSON, pas de markdown), à la deuxième personne ("tu"), qui suit OBLIGATOIREMENT cette structure :
-1. Reprend AU MOINS un détail précis donné par l'utilisateur dans ses réponses — jamais une phrase générique qui irait pour n'importe quel projet.
-2. Dit clairement ce que Spark Idea peut concrètement l'aider à avancer là-dessus — SANS jamais rien promettre en termes de résultat, de gains ou de succès garanti (interdit : "tu vas réussir", "tu vas gagner X", ou toute promesse chiffrée). Reste sur du factuel : ce que l'accompagnement apporte, pas ce que ça va rapporter.
-3. Si le score global ou un critère clé (concurrence, différenciation) est faible, dis-le sans détour : précise honnêtement que ce projet tel quel a un potentiel limité, qu'il ne faut pas s'attendre à aller très loin avec — ne minimise jamais ce point pour faire plaisir.
-4. Termine en proposant UNE piste alternative concrète et réaliste, cohérente avec ce que l'utilisateur a révélé de lui-même (son métier, ses compétences, son contexte mentionnés dans ses réponses) — pas un pivot random, un vrai projet qui a du sens vu qui il est et ce qu'il connaît déjà. Formule ça comme une proposition ouverte ("je peux aussi t'aider à structurer..."), pas une affirmation qu'il va forcément réussir.
-5. Reste factuel et direct du début à la fin, jamais dans le blabla marketing ni dans la promesse commerciale.`;
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 500,
-    system,
-    messages: [{ role: "user", content: "Rédige le verdict maintenant." }],
-  });
-
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    // Filet de sécurité : le verdict est un bonus d'affichage, pas bloquant —
-    // s'il échoue, on ne casse pas le parcours d'inscription pour autant.
-    return "";
-  }
-  return textBlock.text.trim();
-}
-
-export async function generateSchema(ideaText: string): Promise<SchemaResult> {
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4000,
-    system: buildSystemPrompt(),
-    messages: [{ role: "user", content: ideaText }],
-  });
-
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Réponse IA vide ou dans un format inattendu.");
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(extractJson(textBlock.text));
-  } catch (parseErr) {
-    // Log complet du texte brut reçu — indispensable pour comprendre en prod
-    // pourquoi le JSON était invalide (visible dans les logs Vercel).
-    console.error(
-      "[generateSchema] JSON.parse a échoué. Texte brut reçu de Claude :",
-      textBlock.text,
-      "Erreur :",
-      parseErr
-    );
-    throw new Error("La réponse de l'IA n'est pas un JSON valide.");
-  }
-
-  const result = SchemaResultSchema.safeParse(parsed);
-  if (!result.success) {
-    // Log utile pour comprendre pourquoi Claude a dévié du format attendu.
-    console.error(
-      "[generateSchema] Schéma Zod invalide :",
-      JSON.stringify(result.error.flatten()),
-      "Texte brut :",
-      textBlock.text
-    );
-    throw new Error("La réponse de l'IA ne respecte pas le format attendu.");
-  }
-
-  return result.data;
-}
-
-// ---------------------------------------------------------------------------
-// Deuxième fonction : répondre à un message du chat, en tenant compte du
-// schéma déjà généré pour CE projet précis (isolation entre projets — voir
-// la route API qui appelle cette fonction avec le bon ideaId).
-// ---------------------------------------------------------------------------
-export async function answerChatMessage(
-  currentSchema: SchemaResult,
-  userMessage: string
-): Promise<{ reply: string; newNode?: z.infer<typeof NodeSchema> }> {
-  const system = `Tu es l'assistant IA de Spark Idea. Tu discutes avec l'utilisateur UNIQUEMENT à propos du projet "${currentSchema.projectTitle}", dont voici l'état actuel du schéma :
-
-${JSON.stringify(currentSchema.nodes, null, 2)}
-
-RÈGLES :
-- Si l'utilisateur semble parler d'un AUTRE projet (une idée clairement différente, pas liée au projet actuel), signale-le-lui honnêtement et demande confirmation avant de continuer — mais seulement si tu as un vrai doute. Ne demande pas systématiquement, ça deviendrait lourd.
-- Le schéma ci-dessus est un premier jet généré à partir d'une simple description — il reste volontairement général. Ton rôle dans cette conversation est de le compléter : repère ce qui est encore vague ou manquant (cible précise, différenciation réelle, modèle de revenu concret...) et pose UNE question ciblée à la fois pour le préciser, plutôt que d'attendre que l'utilisateur devine quoi te dire.
-- Si la demande de l'utilisateur est vague (ex: "propose-moi des idées", "aide-moi"), pose 1 à 2 questions ciblées avant de répondre, plutôt qu'une réponse générique.
-- Si l'utilisateur demande d'ajouter un point au schéma, réponds en JSON avec un champ "newNode" (même format que les nœuds existants) en plus de ta réponse texte dans "reply".
-- Réponds en JSON strict : { "reply": "...", "newNode": {...} } — "newNode" est optionnel, ne l'inclus que si un point doit vraiment être ajouté au schéma.`;
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 600,
-    system,
-    messages: [{ role: "user", content: userMessage }],
+    messages: [{ role: "user", content: "Génère le prochain lot de quêtes pour cette piste (entre 1 et 5, selon ce qui est vraiment utile maintenant)." }],
   });
 
   const textBlock = message.content.find((b) => b.type === "text");
@@ -395,16 +177,194 @@ RÈGLES :
     throw new Error("Réponse IA vide.");
   }
 
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(extractJson(textBlock.text));
-    return {
-      reply: String(parsed.reply ?? ""),
-      newNode: parsed.newNode ? NodeSchema.parse(parsed.newNode) : undefined,
-    };
+    parsed = JSON.parse(extractJson(textBlock.text));
   } catch (err) {
-    // Filet de sécurité : si jamais le JSON est mal formé, on renvoie au moins
-    // le texte brut plutôt que de faire planter la conversation.
-    console.error("[answerChatMessage] JSON invalide, fallback texte brut :", textBlock.text, err);
-    return { reply: textBlock.text };
+    console.error("[generateQuestBatch] JSON invalide. Texte brut :", textBlock.text, err);
+    throw new Error("La réponse de l'IA n'est pas un JSON valide.");
   }
+
+  const result = QuestBatchSchema.safeParse(parsed);
+  if (!result.success) {
+    console.error("[generateQuestBatch] Schéma Zod invalide :", JSON.stringify(result.error.flatten()));
+    throw new Error("La réponse de l'IA ne respecte pas le format attendu.");
+  }
+
+  return result.data;
+}
+
+// ---------------------------------------------------------------------------
+// But final — écrit par l'utilisateur lui-même à son arrivée sur Quêtes (pas
+// généré par l'IA). L'IA se contente ici de donner un avis honnête et court
+// sur la faisabilité, à la deuxième personne : réaliste ? ambitieux mais
+// possible ? Le but est ensuite stocké tel quel et sert de fil rouge à
+// TOUTES les quêtes générées (marketing ET technique) sur ce projet.
+export async function evaluateFinalGoal(schema: SchemaResult, goalText: string): Promise<string> {
+  const system = `Tu donnes un avis honnête et bref (2-3 phrases MAXIMUM) sur le but qu'un utilisateur vient de fixer pour son projet, en français, à la deuxième personne ("tu"). Pas de blabla motivant creux, du concret.
+
+PROJET : ${schema.projectTitle}
+ANALYSE : ${schema.nodes.map((n) => `- [${n.type}] ${n.label} : ${n.comment}`).join("\n")}
+
+BUT FIXÉ PAR L'UTILISATEUR : "${goalText}"
+
+Dis-lui clairement si ce but est réaliste tel quel, ambitieux mais atteignable avec du travail régulier, ou franchement difficile dans les délais qu'il sous-entend (s'il y en a). Ne le décourage jamais complètement — même un but dur reste "possible, mais ça va demander du travail" — mais sois honnête, pas complaisant. Réponds uniquement avec le texte, sans guillemets, sans préambule.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 250,
+    system,
+    messages: [{ role: "user", content: "Donne ton avis sur ce but." }],
+  });
+
+  const textBlock = message.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") return "Objectif enregistré.";
+  return textBlock.text.trim().replace(/^"|"$/g, "");
+}
+
+// ---------------------------------------------------------------------------
+// "Prestige" : une fois qu'un projet atteint 100% (voir lib/progress.ts),
+// on ne réinitialise RIEN — le schéma, l'historique et les quêtes faites
+// restent. On propose juste un objectif nettement plus ambitieux, adapté à
+// ce que l'utilisateur a réellement atteint (ses derniers chiffres de
+// check-in), pour continuer sur LE MÊME projet.
+// ---------------------------------------------------------------------------
+const PrestigeSuggestionsSchema = z.object({
+  suggestions: z
+    .array(
+      z.object({
+        title: z.string().max(60), // ex: "Créer un système de sous-affiliation"
+        pitch: z.string().max(280),
+      })
+    )
+    .length(3),
+});
+
+export async function suggestPrestigeGoals(
+  schema: SchemaResult,
+  achievedGoalText: string,
+  latestCheckIn: { clients: number; revenue: number; audience: number } | null
+): Promise<{ title: string; pitch: string }[]> {
+  const achievedBlock = latestCheckIn
+    ? `Derniers chiffres déclarés : ${latestCheckIn.clients} clients, ${latestCheckIn.revenue}€ de revenu, ${latestCheckIn.audience} d'audience.`
+    : `Aucun chiffre précis déclaré, mais l'utilisateur a rempli toutes ses quêtes.`;
+
+  const system = `Tu es le moteur de "prestige" du produit "Spark Idea". Un utilisateur vient d'ATTEINDRE son objectif initial sur son projet "${schema.projectTitle}" : "${achievedGoalText}". ${achievedBlock}
+
+Ton rôle : lui proposer EXACTEMENT 3 objectifs suivants, nettement plus ambitieux, qui exploitent ce qu'il a déjà construit pour gagner significativement plus (pas juste "continue pareil mais plus fort" — de vrais paliers différents : monétisation additionnelle, automatisation, structure qui multiplie l'effet du travail déjà fait). Adapte-toi précisément à CE projet, pas de suggestions génériques.
+
+Réponds UNIQUEMENT en JSON strict : { "suggestions": [ { "title": "...", "pitch": "..." } ] } — "title" : 2-6 mots, verbe d'action. "pitch" : 1-2 phrases expliquant concrètement pourquoi cet objectif est le bon prochain palier pour CE projet précis.`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 900,
+    system,
+    messages: [{ role: "user", content: "Propose les 3 prochains objectifs." }],
+  });
+
+  const textBlock = message.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") return [];
+  try {
+    const parsed = PrestigeSuggestionsSchema.parse(JSON.parse(extractJson(textBlock.text)));
+    return parsed.suggestions;
+  } catch (err) {
+    console.error("[suggestPrestigeGoals] Réponse IA invalide :", err);
+    return [];
+  }
+}
+// est le même montant, mais compté à part (voir source="quest" dans
+// UsageLog), pour ne jamais bouffer le quota de l'autre chat.
+// ---------------------------------------------------------------------------
+export async function answerQuestChatMessage(
+  projectTitle: string,
+  quest: { title: string; detail: string },
+  message: string,
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" }
+): Promise<{ reply: string }> {
+  const system = `Tu aides un utilisateur bloqué sur une quête précise du projet "${projectTitle}".
+
+QUÊTE EN COURS : ${quest.title}
+DÉTAIL DÉJÀ DONNÉ : ${quest.detail}
+
+L'utilisateur a déjà lu ce détail et ne comprend toujours pas ou ne sait pas comment s'y prendre. Aide-le concrètement, à la deuxième personne ("tu"), avec des exemples précis (noms d'outils/sites exacts si pertinent) si besoin. Si l'utilisateur a joint une capture d'écran ou une photo, regarde-la et base ta réponse dessus (ex: dis-lui exactement où cliquer, ou ce qui cloche sur l'image). Reste concentré uniquement sur CETTE quête — ne dévie pas vers d'autres sujets du projet. Réponds en 2-5 phrases maximum, pas de liste à puces sauf si vraiment nécessaire.`;
+
+  const content: Anthropic.MessageParam["content"] = image
+    ? [
+        { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } },
+        { type: "text", text: message },
+      ]
+    : message;
+
+  const message_ = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 600,
+    system,
+    messages: [{ role: "user", content }],
+  });
+
+  const textBlock = message_.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    return { reply: "Je n'ai pas pu répondre, réessaie." };
+  }
+  return { reply: textBlock.text };
+}
+
+// ---------------------------------------------------------------------------
+// Chat libre, spécialisé sur le projet entier — décidé avec Raphaël : plus
+// besoin de sélectionner une quête précise avant de parler à l'IA. Elle
+// connaît tout le contexte du projet (schéma complet, quêtes en cours) et
+// répond librement à n'importe quelle question, tant que ça reste utile pour
+// avancer sur CE projet précis — comme un cerveau dédié, pas un simple
+// assistant de déblocage de quête.
+// ---------------------------------------------------------------------------
+export async function answerProjectChatMessage(
+  projectTitle: string,
+  schema: SchemaResult,
+  activeQuests: { title: string; track: Track }[],
+  message: string,
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" }
+): Promise<{ reply: string }> {
+  const questsText = activeQuests.length
+    ? activeQuests.map((q) => `- [${q.track}] ${q.title}`).join("\n")
+    : "(aucune quête en cours pour l'instant)";
+
+  const criteriaText = Object.entries(schema.criteria)
+    .map(([key, c]) => `- ${key} : ${c.score}/5 — ${c.note}`)
+    .join("\n");
+
+  const system = `Tu es l'IA personnelle du projet "${projectTitle}" sur Spark Idea. Tu es un cerveau dédié à CE projet précis — l'utilisateur peut te parler librement de n'importe quel souci ou question, pas seulement d'une quête précise.
+
+CONTEXTE DU PROJET :
+Score global : ${schema.overallScore}/10
+${criteriaText}
+
+QUÊTES EN COURS :
+${questsText}
+
+RÈGLES :
+- Réponds à n'importe quelle question ou problème que soulève l'utilisateur, même si ça ne correspond à aucune quête listée — reste utile avant tout.
+- Recentre toujours ta réponse sur les objectifs concrets de CE projet, jamais un conseil générique qui irait pour n'importe quel projet.
+- Si l'utilisateur semble partir sur un sujet totalement différent (un autre projet, hors-sujet complet), signale-le-lui honnêtement avant de continuer.
+- Si l'utilisateur a joint une image, regarde-la et base ta réponse dessus.
+- Sois concret, à la deuxième personne ("tu"), 2-6 phrases sauf si une vraie liste d'étapes est nécessaire.`;
+
+  const content: Anthropic.MessageParam["content"] = image
+    ? [
+        { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } },
+        { type: "text", text: message },
+      ]
+    : message;
+
+  const result = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 700,
+    system,
+    messages: [{ role: "user", content }],
+  });
+
+  const textBlock = result.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    return { reply: "Je n'ai pas pu répondre, réessaie." };
+  }
+  return { reply: textBlock.text };
 }
