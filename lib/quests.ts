@@ -36,6 +36,19 @@ async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Tra
   });
   if (pending.length > 0) return;
 
+  // Deuxième filet de sécurité, indépendant du reste : quoi qu'il arrive
+  // (préchargement de lien non corrigé, onglet dupliqué, futur bug qu'on
+  // n'a pas encore vu), cette piste ne peut jamais relancer une génération
+  // payante plus d'une fois toutes les 20 secondes. Sans ça, un seul bug
+  // de prefetch suffit à vider le portefeuille en quelques minutes.
+  const mostRecentAttempt = await db.quest.findFirst({
+    where: { ideaId, track },
+    orderBy: { createdAt: "desc" },
+  });
+  if (mostRecentAttempt && Date.now() - mostRecentAttempt.createdAt.getTime() < 20_000) {
+    return;
+  }
+
   const allOnTrack = await db.quest.findMany({
     where: { ideaId, track },
     orderBy: { createdAt: "asc" },
@@ -55,7 +68,36 @@ async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Tra
   });
   const otherTrackCompleted = otherTrackDone.map((q) => q.title);
 
-  const batch = await generateQuestBatch(schema, track, lastStageLabel, completedTitles, goals, otherTrackCompleted);
+  let batch;
+  try {
+    batch = await generateQuestBatch(schema, track, lastStageLabel, completedTitles, goals, otherTrackCompleted);
+  } catch (err) {
+    // Garde-fou critique : avant, un échec ici (JSON mal formé renvoyé par
+    // l'IA, erreur réseau...) repartait les mains vides — "pending" restait
+    // à zéro, donc la PROCHAINE fois que cette page se chargeait (y compris
+    // via un préchargement de lien, voir DrawerNav.tsx), la génération
+    // repartait pour un tour, payante à chaque essai, sans jamais réussir à
+    // débloquer la piste. C'est ce qui a pu ressembler à une "régénération
+    // en continu" qui consomme du crédit API pour rien. Maintenant, un
+    // échec insère une quête de secours immédiatement : la piste n'est
+    // plus jamais "vide" après un seul essai raté, donc plus de nouvelle
+    // tentative payante tant que l'utilisateur n'a pas traité cette quête.
+    console.error(`[ensureTrackBatch] Échec génération IA pour la piste "${track}" (idée ${ideaId}) :`, err);
+    const stillPendingAfterFailure = await db.quest.findMany({ where: { ideaId, track, status: "PENDING" } });
+    if (stillPendingAfterFailure.length > 0) return;
+    await db.quest.create({
+      data: {
+        ideaId,
+        track,
+        stageLabel: lastStageLabel ?? "Démarrage",
+        title: "Réessayer la génération de quêtes",
+        detail:
+          "La génération automatique a rencontré un problème temporaire. Ouvre le chat IA du projet et écris \"relance mes quêtes\" pour réessayer manuellement.",
+        order: 0,
+      },
+    });
+    return;
+  }
 
   // Garde-fou anti-doublon : si une autre requête concurrente (ex. deux
   // onglets ouverts, ou un préchargement Next.js) a généré un lot pendant
