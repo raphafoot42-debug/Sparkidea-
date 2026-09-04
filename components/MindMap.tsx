@@ -49,6 +49,8 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
   const [chatBusy, setChatBusy] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [pendingProposal, setPendingProposal] = useState<{ label: string; comment: string; type: "todo" | "risk" | "opportunity" } | null>(null);
+  const [applyingProposal, setApplyingProposal] = useState(false);
   // Verrou de l'essai gratuit (avant compte) : les questions de clarification
   // ont déjà eu lieu AVANT le schéma (voir app/page.tsx + askClarifyingQuestion).
   // Une fois le schéma affiché, le chat est complètement verrouillé — seul
@@ -188,12 +190,45 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
           setChatError(data.error ?? "Erreur.");
         } else {
           if (data.reply) setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
-          if (onSchemaChange) onSchemaChange(data.schema);
+          // On ne modifie plus le schéma tout seul : on garde la
+          // proposition de côté, l'utilisateur valide via les boutons
+          // affichés dans le chat (voir pendingProposal plus bas).
+          if (data.proposedNode) setPendingProposal(data.proposedNode);
         }
       }
     } finally {
       setChatBusy(false);
     }
+  }
+
+  async function confirmProposal() {
+    if (!pendingProposal || !ideaId) return;
+    setApplyingProposal(true);
+    try {
+      const res = await fetch("/api/chat/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId, node: pendingProposal }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setChatError(data.error ?? "Erreur lors de l'application.");
+      } else {
+        if (onSchemaChange) onSchemaChange(data.schema);
+        setChatMessages((m) => [
+          ...m,
+          { role: "assistant", text: "Ajouté au schéma. Tes prochaines quêtes vont en tenir compte." },
+        ]);
+        setPendingProposal(null);
+      }
+    } finally {
+      setApplyingProposal(false);
+    }
+  }
+
+  function dismissProposal() {
+    setPendingProposal(null);
+    setChatMessages((m) => [...m, { role: "assistant", text: "Ok, je n'ai rien changé." }]);
   }
 
   const centerPos = positions.find((p) => p.id === "center")!;
@@ -432,6 +467,31 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
               </span>
             </div>
           ))}
+
+          {pendingProposal && (
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 10,
+                background: "var(--surface-subtle)",
+              }}
+            >
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 4 }}>
+                Proposition — {pendingProposal.type === "todo" ? "à faire" : pendingProposal.type === "risk" ? "vigilance" : "opportunité"}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{pendingProposal.label}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>{pendingProposal.comment}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={confirmProposal} disabled={applyingProposal} className="btn-primary" style={{ fontSize: 12, padding: "5px 12px" }}>
+                  {applyingProposal ? "..." : "Appliquer"}
+                </button>
+                <button onClick={dismissProposal} disabled={applyingProposal} className="btn-secondary" style={{ fontSize: 12, padding: "5px 12px" }}>
+                  Ignorer
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
