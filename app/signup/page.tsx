@@ -41,7 +41,7 @@ export default function SignupPage() {
       <form
         onSubmit={handleSubmit}
         className="panel"
-        style={{ position: "relative", zIndex: 2, width: 340, padding: "30px 26px" }}
+        style={{ position: "relative", zIndex: 2, width: 340, maxWidth: "90vw", padding: "30px 26px" }}
       >
         <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14 }}>◆ Spark Idea</div>
         <h1 style={{ textAlign: "center", fontSize: 17, fontWeight: 600, margin: "12px 0 4px" }}>
@@ -81,12 +81,6 @@ export default function SignupPage() {
           {loading ? "..." : "Continuer"}
         </button>
 
-        <div style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginTop: 14 }}>
-          Déjà un compte ?{" "}
-          <Link href="/login" style={{ color: "var(--line)" }}>
-            Se connecter
-          </Link>
-        </div>
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <Link href="/" style={{ fontSize: 12, color: "var(--muted)" }}>
             ← Revenir en arrière
