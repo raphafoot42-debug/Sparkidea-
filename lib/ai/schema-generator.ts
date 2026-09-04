@@ -47,7 +47,7 @@ export const CRITERIA = [
 // si jamais Claude renvoie un format inattendu, on le détecte immédiatement au
 // lieu de laisser une erreur silencieuse remonter jusqu'à l'utilisateur.
 // ---------------------------------------------------------------------------
-const NodeSchema = z.object({
+export const NodeSchema = z.object({
   id: z.string(),
   type: z.enum(["todo", "risk", "win"]),
   label: z.string().max(80),
