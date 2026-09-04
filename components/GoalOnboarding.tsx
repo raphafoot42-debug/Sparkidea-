@@ -3,186 +3,126 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Goal = {
-  id: string;
-  text: string;
-};
-
-export function GoalStrip({
-  ideaId,
-  goals,
-}: {
-  ideaId: string;
-  goals: Goal[];
-}) {
+export function GoalOnboarding({ ideaId, projectTitle }: { ideaId: string; projectTitle: string }) {
   const router = useRouter();
-  const [modal, setModal] = useState<{
-    mode: "create" | "update";
-    goalId?: string;
-    value: string;
-  } | null>(null);
-  const [reason, setReason] = useState("");
+  const [goal, setGoal] = useState("");
+  const [targetMetric, setTargetMetric] = useState<"clients" | "revenue" | "audience" | "">("");
+  const [targetValue, setTargetValue] = useState("");
+  const [communicationStyle, setCommunicationStyle] = useState<"visage" | "anonyme" | "ia_generee" | "pas_decide" | "">("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  const activeGoal = goals[0];
-
-  function openCreate() {
-    setError(null);
-    setReason("");
-    setModal({ mode: "create", value: "" });
-  }
-
-  function openUpdate(goal: Goal) {
-    setError(null);
-    setReason("");
-    setModal({ mode: "update", goalId: goal.id, value: goal.text });
-  }
-
-  async function saveGoal() {
-    if (!modal || modal.value.trim().length < 3 || busy) return;
-    if (modal.mode === "update" && reason.trim().length < 8) {
-      setError("Explique en quelques mots pourquoi tu dois modifier cet objectif.");
-      return;
-    }
-
+  async function submit() {
+    if (goal.trim().length < 3 || busy) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/ideas/goals", {
+    const numericValue = Number(targetValue);
+    const res = await fetch("/api/ideas/set-goal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: modal.mode,
         ideaId,
-        goal: modal.value.trim(),
-        ...(modal.mode === "update"
-          ? { goalId: modal.goalId, reason: reason.trim() }
-          : {}),
+        goal: goal.trim(),
+        ...(targetMetric && numericValue > 0 ? { targetMetric, targetValue: numericValue } : {}),
+        ...(communicationStyle ? { communicationStyle } : {}),
       }),
     });
-    const data = await res.json().catch(() => null);
+    const data = await res.json();
     setBusy(false);
-
     if (!res.ok) {
-      setError(data?.error ?? "Impossible d'enregistrer cet objectif.");
+      setError(data.error ?? "Erreur, réessaie.");
       return;
     }
-
-    setModal(null);
-    router.refresh();
+    setFeedback(data.feedback);
   }
 
   return (
-    <>
-      <section
-        className="goal-strip"
-        aria-label="Objectifs du projet"
-        style={{
-          width: "100%",
-          maxWidth: 900,
-          position: "relative",
-          overflow: "hidden",
-          border: "1px solid rgba(34, 211, 238, 0.35)",
-          borderRadius: 16,
-          padding: "16px 18px",
-          background:
-            "linear-gradient(105deg, rgba(34,211,238,0.1), rgba(168,85,247,0.1) 60%, rgba(11,14,20,0.94))",
-          boxShadow: "0 16px 38px rgba(0,0,0,0.16)",
-        }}
-      >
-        <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.14em", color: "var(--line)", marginBottom: 8 }}>
-          Ton objectif
-        </div>
+    <div className="panel" style={{ width: "100%", maxWidth: 560, padding: "28px 24px" }}>
+      {!feedback ? (
+        <>
+          <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Bienvenue</div>
+          <h1 style={{ fontSize: 19, fontWeight: 600, marginBottom: 10, lineHeight: 1.35 }}>
+            Je suis là pour t&apos;aider à faire avancer <em>{projectTitle}</em>. Avant de commencer :
+          </h1>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Quel est ton but final avec ce projet ?</p>
+          <textarea
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="Ex : avoir 1000 abonnés engagés sur TikTok et signer mon premier client payant d'ici 3 mois..."
+            className="field-input"
+            rows={4}
+            style={{ width: "100%", resize: "vertical", marginBottom: 6 }}
+          />
+          <p style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 14 }}>
+            Sois précis si tu peux : combien d&apos;abonnés, de clients, de revenu — ça aide à te donner des quêtes vraiment utiles.
+          </p>
 
-        {activeGoal ? (
-          <>
-            <div style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 650, maxWidth: "calc(100% - 88px)", paddingRight: 8 }}>
-              {activeGoal.text}
-            </div>
-            {goals.length > 1 && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-                {goals.map((goal, index) => (
-                  <button
-                    key={goal.id}
-                    type="button"
-                    onClick={() => openUpdate(goal)}
-                    className="goal-chip"
-                    title={goal.text}
-                  >
-                    {index + 1}. {goal.text}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 8, marginTop: 13, flexWrap: "wrap" }}>
-              <button type="button" className="btn-secondary" style={{ fontSize: 11.5, padding: "7px 11px" }} onClick={() => openUpdate(activeGoal)}>
-                Modifier
-              </button>
-              {goals.length < 3 ? (
-                <button type="button" className="btn-secondary" style={{ fontSize: 11.5, padding: "7px 11px" }} onClick={openCreate}>
-                  + Ajouter un objectif
-                </button>
-              ) : (
-                <span style={{ fontSize: 11.5, color: "var(--muted)", alignSelf: "center" }}>
-                  3 objectifs maximum : reste concentré pour réussir.
-                </span>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 5 }}>Fixe le cap de ton projet</div>
-            <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 12 }}>
-              Tes quêtes seront choisies autour de cet objectif.
-            </div>
-            <button type="button" className="btn-primary" style={{ fontSize: 12 }} onClick={openCreate}>
-              Définir mon objectif
-            </button>
-          </>
-        )}
-      </section>
-
-      {modal && (
-        <div className="goal-modal-backdrop" role="presentation" onMouseDown={() => setModal(null)}>
-          <div className="goal-modal panel" role="dialog" aria-modal="true" aria-labelledby="goal-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button type="button" aria-label="Fermer" className="goal-modal-close" onClick={() => setModal(null)}>×</button>
-            <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--line)", marginBottom: 8 }}>
-              {modal.mode === "create" ? "Nouvel objectif" : "Modifier l'objectif"}
-            </div>
-            <h2 id="goal-modal-title" style={{ fontSize: 19, marginBottom: 8 }}>
-              {modal.mode === "create" ? "Quel cap veux-tu garder en tête ?" : "Pourquoi ce changement est nécessaire ?"}
-            </h2>
-            <p style={{ fontSize: 12.5, lineHeight: 1.55, color: "var(--muted)", marginBottom: 16 }}>
-              {modal.mode === "create"
-                ? "Un objectif clair aide l'IA à choisir les quêtes les plus importantes, dans le bon ordre."
-                : "On ne change pas de cap sur un coup de tête : une raison permet de garder une progression cohérente."}
-            </p>
-            <textarea
+          <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>
+            Objectif chiffré <span style={{ opacity: 0.6, fontWeight: 400 }}>(optionnel, mais recommandé — sert à calculer ta vraie progression)</span>
+          </p>
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            <select
+              value={targetMetric}
+              onChange={(e) => setTargetMetric(e.target.value as typeof targetMetric)}
               className="field-input"
-              rows={4}
-              value={modal.value}
-              onChange={(event) => setModal({ ...modal, value: event.target.value })}
-              placeholder="Ex : signer mes 3 premiers clients d'ici 90 jours"
-              style={{ resize: "vertical", marginBottom: 12 }}
-              autoFocus
+              style={{ flex: 1 }}
+            >
+              <option value="">Choisis une métrique</option>
+              <option value="clients">Clients</option>
+              <option value="revenue">Revenu (€)</option>
+              <option value="audience">Audience</option>
+            </select>
+            <input
+              type="number"
+              min={1}
+              value={targetValue}
+              onChange={(e) => setTargetValue(e.target.value)}
+              placeholder="Ex : 100"
+              className="field-input"
+              style={{ width: 110 }}
             />
-            {modal.mode === "update" && (
-              <textarea
-                className="field-input"
-                rows={3}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Ex : mon offre a changé après les premiers retours clients..."
-                style={{ resize: "vertical", marginBottom: 12 }}
-              />
-            )}
-            {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
-            <button type="button" className="btn-primary" onClick={saveGoal} disabled={busy || modal.value.trim().length < 3} style={{ width: "100%" }}>
-              {busy ? "L'IA analyse ton objectif..." : "Valider l'objectif"}
-            </button>
           </div>
-        </div>
+
+          <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>
+            Pour le contenu marketing <span style={{ opacity: 0.6, fontWeight: 400 }}>(optionnel — pour ne jamais te proposer un format qui ne te convient pas)</span>
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
+            {[
+              { value: "visage" as const, label: "Je suis à l'aise pour apparaître en vidéo" },
+              { value: "anonyme" as const, label: "Je préfère rester anonyme (voix, écran, texte)" },
+              { value: "ia_generee" as const, label: "Je préfère du contenu généré par IA (avatar, voix IA)" },
+              { value: "pas_decide" as const, label: "Je n'ai pas encore décidé" },
+            ].map((opt) => (
+              <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  name="communicationStyle"
+                  checked={communicationStyle === opt.value}
+                  onChange={() => setCommunicationStyle(opt.value)}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+
+          {error && <div className="error-text" style={{ marginBottom: 12 }}>{error}</div>}
+          <button onClick={submit} disabled={busy} className="btn-primary" style={{ width: "100%" }}>
+            {busy ? "..." : "Valider mon but"}
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 13, color: "var(--line)", marginBottom: 10 }}>Ton but</div>
+          <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 18, fontStyle: "italic", color: "var(--muted)" }}>
+            « {goal} »
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 22 }}>{feedback}</p>
+          <button onClick={() => router.refresh()} className="btn-primary" style={{ width: "100%" }}>
+            C&apos;est parti →
+          </button>
+        </>
       )}
-    </>
+    </div>
   );
 }
