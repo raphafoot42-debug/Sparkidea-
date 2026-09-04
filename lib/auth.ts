@@ -91,6 +91,69 @@ export async function requireAdmin() {
 }
 
 // -----------------------------------------------------------------------
+// Anti bruteforce : 5 échecs consécutifs verrouillent le compte 15 minutes.
+// Le compteur repart de zéro dès qu'une connexion réussit. On verrouille
+// le COMPTE (par email), pas l'IP — plus simple, et suffisant contre un
+// bot qui teste des mots de passe sur un compte ciblé.
+// -----------------------------------------------------------------------
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
+export function isAccountLocked(user: { lockedUntil: Date | null }): boolean {
+  return !!user.lockedUntil && user.lockedUntil.getTime() > Date.now();
+}
+
+export async function recordFailedLogin(userId: string, currentAttempts: number) {
+  const attempts = currentAttempts + 1;
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      failedLoginAttempts: attempts,
+      lockedUntil: attempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCK_DURATION_MS) : null,
+    },
+  });
+}
+
+export async function resetFailedLogins(userId: string) {
+  await db.user.update({
+    where: { id: userId },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+}
+
+// -----------------------------------------------------------------------
+// Mot de passe oublié : token aléatoire (pas le HMAC de session — celui-ci
+// à usage unique, envoyé par email, jamais stocké en clair côté serveur).
+// -----------------------------------------------------------------------
+const RESET_TOKEN_DURATION_MS = 60 * 60 * 1000; // 1h
+
+export async function createPasswordResetToken(userId: string): Promise<string> {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  await db.user.update({
+    where: { id: userId },
+    data: { resetTokenHash: tokenHash, resetTokenExpiry: new Date(Date.now() + RESET_TOKEN_DURATION_MS) },
+  });
+  return rawToken; // envoyé par email, jamais loggé ni stocké tel quel
+}
+
+export async function consumePasswordResetToken(rawToken: string) {
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  const user = await db.user.findFirst({ where: { resetTokenHash: tokenHash } });
+  if (!user || !user.resetTokenExpiry || user.resetTokenExpiry.getTime() < Date.now()) {
+    return null;
+  }
+  return user;
+}
+
+export async function clearPasswordResetToken(userId: string) {
+  await db.user.update({
+    where: { id: userId },
+    data: { resetTokenHash: null, resetTokenExpiry: null },
+  });
+}
+
+// -----------------------------------------------------------------------
 // Session admin autonome — indépendante de la base de données.
 // Le cookie contient la valeur "admin" signée avec SESSION_SECRET.
 // Aucun compte utilisateur requis : on vérifie uniquement le code ADMIN_CODE.
