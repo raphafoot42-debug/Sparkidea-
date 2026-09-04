@@ -2,12 +2,23 @@
 
 import { useState } from "react";
 
-// Bouton "Partager mon analyse" — génère (ou récupère) le lien public en
-// lecture seule via /api/ideas/share, puis tente de le copier dans le
-// presse-papier. Safari (iPhone/iPad) refuse souvent la copie automatique
-// après un appel réseau (le geste utilisateur est considéré "trop vieux") —
-// dans ce cas on affiche le lien à l'écran pour une copie manuelle, au lieu
-// d'afficher une simple erreur qui cache que le lien existe bel et bien.
+function ShareIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+      <circle cx="12.5" cy="3.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="3.5" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="12.5" cy="12.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M5.1 7.1 11 4.3M5.1 8.9 11 11.7" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+// Bouton "Partager" — génère (ou récupère) le lien public en lecture seule
+// via /api/ideas/share, puis tente de le copier dans le presse-papier.
+// Safari (iPhone/iPad) refuse souvent la copie automatique après un appel
+// réseau (le geste utilisateur est considéré "trop vieux") — dans ce cas
+// on affiche le lien à l'écran pour une copie manuelle, au lieu d'afficher
+// une simple erreur qui cache que le lien existe bel et bien.
 export function ShareButton() {
   const [status, setStatus] = useState<"idle" | "loading" | "copied" | "manual" | "error">("idle");
   const [link, setLink] = useState<string | null>(null);
@@ -41,11 +52,26 @@ export function ShareButton() {
 
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
-      <button onClick={handleShare} className="btn-secondary" style={{ borderRadius: 20, fontSize: 12.5 }} disabled={status === "loading"}>
+      <button
+        onClick={handleShare}
+        disabled={status === "loading"}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          background: "transparent",
+          border: "none",
+          color: "var(--muted)",
+          fontSize: 12,
+          cursor: "pointer",
+          padding: "4px 2px",
+        }}
+      >
+        <ShareIcon />
         {status === "loading" && "Un instant..."}
-        {status === "copied" && "Lien copié ✓"}
-        {status === "error" && "Erreur, réessaie"}
-        {(status === "idle" || status === "manual") && "Partager mon analyse"}
+        {status === "copied" && "Copié"}
+        {status === "error" && "Erreur"}
+        {(status === "idle" || status === "manual") && "Partager"}
       </button>
 
       {status === "manual" && link && (
@@ -54,7 +80,7 @@ export function ShareButton() {
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",
-            left: 0,
+            right: 0,
             zIndex: 20,
             padding: 10,
             minWidth: 240,
