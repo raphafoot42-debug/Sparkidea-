@@ -11,7 +11,12 @@ import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from 
 // à une quête sélectionnée, il connaît tout le projet et répond librement.
 const BodySchema = z.object({
   ideaId: z.string(),
-  message: z.string().min(1).max(500),
+  // Avant : 500 caractères max, ce qui coupait un simple paragraphe de
+  // quelques phrases — ça donnait l'impression que l'IA "ne pouvait pas
+  // lire" un message normal. Relevé à 8000 caractères (plusieurs
+  // paragraphes), ce qui reste très raisonnable en coût vu que le
+  // plafond de messages/mois limite déjà la dépense totale.
+  message: z.string().min(1).max(8000),
   image: z
     .object({
       base64: z.string().max(8_000_000), // ~6 Mo décodé, large marge pour une capture d'écran
