@@ -12,6 +12,9 @@ import { computeGlobalProgress } from "@/lib/progress";
 import { PrestigeClient } from "@/components/PrestigeClient";
 import { TrialBanner } from "@/components/TrialBanner";
 import { ShareButton } from "@/components/ShareButton";
+import { ExportPdfButton } from "@/components/ExportPdfButton";
+import { QuestChatClient } from "@/components/QuestChatClient";
+import { HAS_PDF_EXPORT, QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
 import type { SchemaResult } from "@/lib/ai/schema-generator"; 
 
 export default async function DashboardPage({
@@ -30,6 +33,11 @@ export default async function DashboardPage({
     where: { userId: user.id },
     orderBy: { createdAt: "asc" },
     select: { id: true, title: true },
+  });
+
+  const aiMessageLimit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const aiUsedThisMonth = await db.usageLog.count({
+    where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
   });
 
   if (allIdeas.length === 0) {
@@ -102,20 +110,27 @@ export default async function DashboardPage({
         )}
         <div style={{ width: "100%", maxWidth: 640, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginBottom: 12 }}>
           {activeIdea.shareToken && activeIdea.shareViews > 0 && (
-            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
-              Lien consulté {activeIdea.shareViews} fois
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>
+              {activeIdea.shareViews} vues
             </span>
           )}
           <ShareButton />
+          {HAS_PDF_EXPORT[toPlanKey(user.plan)] ? (
+            <ExportPdfButton schema={schema} />
+          ) : (
+            <Link href="/pricing" style={{ fontSize: 11.5, color: "var(--muted)" }}>
+              Export PDF avec Pro →
+            </Link>
+          )}
         </div>
         <ProjectSwitcher projects={allIdeas} activeIdeaId={activeIdea.id} />
         <Link
           href={`/dashboard/quests?idea=${activeIdea.id}`}
           prefetch={false}
           className="btn-primary"
-          style={{ marginTop: 16, display: "inline-block" }}
+          style={{ marginTop: 16, display: "inline-block", padding: "8px 18px", fontSize: 13 }}
         >
-          Quête du jour →
+          Voir mes quêtes →
         </Link>
         {progress >= 100 && <PrestigeClient ideaId={activeIdea.id} />}
       </div>
@@ -127,6 +142,17 @@ export default async function DashboardPage({
         </div>
         <DashboardClient ideaId={activeIdea.id} initialSchema={schema} />
       </div>
+
+      {/* Assistant IA personnel du projet — flottant, toujours disponible
+          ici, pas caché derrière un clic sur une quête précise (avant,
+          seule /dashboard/ai le montait, atteignable uniquement via "Voir
+          plus" sur une quête). Il connaît déjà le schéma et les quêtes en
+          cours, comme un vrai assistant dédié au projet. */}
+      <QuestChatClient
+        ideaId={activeIdea.id}
+        projectTitle={schema.projectTitle ?? activeIdea.title}
+        quota={{ used: aiUsedThisMonth, limit: aiMessageLimit }}
+      />
     </div>
   );
 }
