@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 
-export default function ResetPasswordPage() {
+// useSearchParams() force Next.js à bailer du rendu statique pour toute la
+// page s'il n'est pas isolé dans un <Suspense> — d'où l'erreur de build
+// "should be wrapped in a suspense boundary". On sépare donc le contenu qui
+// lit l'URL (ResetPasswordForm) du composant de page lui-même, qui se
+// contente de l'envelopper dans <Suspense>.
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -42,60 +47,68 @@ export default function ResetPasswordPage() {
   }
 
   return (
+    <div className="panel" style={{ position: "relative", zIndex: 2, width: 340, maxWidth: "90vw", padding: "30px 26px" }}>
+      <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14 }}>◆ Spark Idea</div>
+      <h1 style={{ textAlign: "center", fontSize: 17, fontWeight: 600, margin: "12px 0 4px" }}>
+        Nouveau mot de passe
+      </h1>
+
+      {!token ? (
+        <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", marginTop: 20 }}>
+          Lien invalide.{" "}
+          <a href="/forgot-password" style={{ color: "var(--line)" }}>
+            Refais une demande.
+          </a>
+        </p>
+      ) : done ? (
+        <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", marginTop: 20 }}>
+          Mot de passe mis à jour. Redirection vers la connexion...
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
+          <div style={{ marginBottom: 13 }}>
+            <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Nouveau mot de passe</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="field-input"
+              placeholder="8 caractères minimum"
+            />
+          </div>
+          <div style={{ marginBottom: 13 }}>
+            <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Confirme-le</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="field-input"
+              placeholder="8 caractères minimum"
+            />
+          </div>
+
+          {error && <div className="error-text">{error}</div>}
+
+          <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", marginTop: 8 }}>
+            {loading ? "..." : "Valider"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
     <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <AnimatedGrid intensity="discrete" />
-      <div className="panel" style={{ position: "relative", zIndex: 2, width: 340, maxWidth: "90vw", padding: "30px 26px" }}>
-        <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14 }}>◆ Spark Idea</div>
-        <h1 style={{ textAlign: "center", fontSize: 17, fontWeight: 600, margin: "12px 0 4px" }}>
-          Nouveau mot de passe
-        </h1>
-
-        {!token ? (
-          <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", marginTop: 20 }}>
-            Lien invalide.{" "}
-            <a href="/forgot-password" style={{ color: "var(--line)" }}>
-              Refais une demande.
-            </a>
-          </p>
-        ) : done ? (
-          <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", marginTop: 20 }}>
-            Mot de passe mis à jour. Redirection vers la connexion...
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
-            <div style={{ marginBottom: 13 }}>
-              <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Nouveau mot de passe</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="field-input"
-                placeholder="8 caractères minimum"
-              />
-            </div>
-            <div style={{ marginBottom: 13 }}>
-              <label style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Confirme-le</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="field-input"
-                placeholder="8 caractères minimum"
-              />
-            </div>
-
-            {error && <div className="error-text">{error}</div>}
-
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", marginTop: 8 }}>
-              {loading ? "..." : "Valider"}
-            </button>
-          </form>
-        )}
-      </div>
+      <Suspense fallback={null}>
+        <ResetPasswordForm />
+      </Suspense>
     </div>
   );
 }
