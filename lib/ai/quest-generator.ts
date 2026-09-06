@@ -322,7 +322,14 @@ export async function answerProjectChatMessage(
   schema: SchemaResult,
   activeQuests: { title: string; track: Track }[],
   message: string,
-  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" }
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" },
+  // Historique récent de la conversation (hors le message actuel), du plus
+  // ancien au plus récent. Avant, chaque appel n'envoyait QUE le dernier
+  // message — l'IA ne se souvenait de rien d'une phrase à l'autre, même
+  // dans la même conversation. On plafonne le nombre de tours envoyés côté
+  // appelant (voir route.ts) pour ne pas laisser le coût grimper sans
+  // limite sur une conversation qui traîne en longueur.
+  history: { role: "user" | "assistant"; text: string }[] = []
 ): Promise<{ reply: string }> {
   const questsText = activeQuests.length
     ? activeQuests.map((q) => `- [${q.track}] ${q.title}`).join("\n")
@@ -342,6 +349,7 @@ QUÊTES EN COURS :
 ${questsText}
 
 RÈGLES :
+- Tu as accès à l'historique récent de cette conversation ci-dessous — appuie-toi dessus, ne redemande jamais une information déjà donnée par l'utilisateur plus haut dans l'échange.
 - Réponds à n'importe quelle question ou problème que soulève l'utilisateur, même si ça ne correspond à aucune quête listée — reste utile avant tout.
 - Recentre toujours ta réponse sur les objectifs concrets de CE projet, jamais un conseil générique qui irait pour n'importe quel projet.
 - Si l'utilisateur semble partir sur un sujet totalement différent (un autre projet, hors-sujet complet), signale-le-lui honnêtement avant de continuer.
@@ -355,11 +363,13 @@ RÈGLES :
       ]
     : message;
 
+  const historyMessages: Anthropic.MessageParam[] = history.map((h) => ({ role: h.role, content: h.text }));
+
   const result = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 700,
     system,
-    messages: [{ role: "user", content }],
+    messages: [...historyMessages, { role: "user", content }],
   });
 
   const textBlock = result.content.find((b) => b.type === "text");

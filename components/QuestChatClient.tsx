@@ -65,6 +65,15 @@ function PlusIcon() {
     </svg>
   );
 }
+function HistoryIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M2 8a6 6 0 1 0 1.8-4.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M2 2.5V5h2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 5v3.2l2.2 1.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 function MicIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
@@ -144,6 +153,60 @@ export function QuestChatClient({
   quota: { used: number; limit: number };
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [conversations, setConversations] = useState<{ id: string; title: string; updatedAt: string }[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [convListOpen, setConvListOpen] = useState(false);
+
+  // Charge la liste des conversations de ce projet au montage, et ouvre la
+  // plus récente automatiquement (comme Claude.ai qui rouvre ta dernière
+  // conversation) — sauf s'il n'y en a encore aucune, auquel cas le chat
+  // reste vide, prêt pour un premier message.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/quests/conversations?ideaId=${ideaId}`)
+      .then((res) => (res.ok ? res.json() : { conversations: [] }))
+      .then((data) => {
+        if (cancelled) return;
+        const list = Array.isArray(data.conversations) ? data.conversations : [];
+        setConversations(list);
+        if (list.length > 0) {
+          setActiveConversationId(list[0].id);
+        } else {
+          setHistoryLoaded(true);
+        }
+      })
+      .catch(() => setHistoryLoaded(true));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ideaId]);
+
+  // Recharge les messages de la conversation active — avant, le chat
+  // repartait toujours à vide (perdu au rafraîchissement, en changeant de
+  // page, ou en revenant le lendemain), ce qui agaçait à raison un client
+  // qui avait déjà expliqué son problème à l'IA juste avant.
+  useEffect(() => {
+    if (!activeConversationId) return;
+    let cancelled = false;
+    setHistoryLoaded(false);
+    fetch(`/api/quests/chat?conversationId=${activeConversationId}`)
+      .then((res) => (res.ok ? res.json() : { messages: [] }))
+      .then((data) => {
+        if (cancelled) return;
+        setMessages(
+          Array.isArray(data.messages)
+            ? data.messages.map((m: { role: "user" | "assistant"; text: string }) => ({ role: m.role, text: m.text }))
+            : []
+        );
+        setHistoryLoaded(true);
+      })
+      .catch(() => setHistoryLoaded(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConversationId]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +350,7 @@ export function QuestChatClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ideaId,
+        conversationId: activeConversationId ?? undefined,
         message: msg || "Regarde cette image et aide-moi.",
         image: sentAttachment ? { base64: sentAttachment.base64, mediaType: sentAttachment.mediaType } : undefined,
       }),
@@ -298,6 +362,16 @@ export function QuestChatClient({
       setError(data.error ?? "Erreur.");
       return;
     }
+    // Première fois qu'on parle dans un chat flambant neuf : le serveur
+    // vient de créer la conversation, on la reprend ici et on la fait
+    // apparaître dans la liste (avec son titre auto-généré).
+    if (!activeConversationId && data.conversationId) {
+      setActiveConversationId(data.conversationId);
+      setConversations((c) => [
+        { id: data.conversationId, title: data.conversationTitle ?? "Nouvelle conversation", updatedAt: new Date().toISOString() },
+        ...c,
+      ]);
+    }
     const extracted = extractCodeBlock(data.reply);
     if (extracted) {
       setArtifact({ language: extracted.language, code: extracted.code });
@@ -305,6 +379,22 @@ export function QuestChatClient({
     } else {
       setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
     }
+  }
+
+  // Bouton "+" façon Claude.ai : ferme la conversation active, repart sur
+  // un écran vide. Rien n'est créé en base tant qu'aucun message n'est
+  // envoyé — pas de conversation vide qui traînerait dans la liste.
+  function startNewConversation() {
+    setActiveConversationId(null);
+    setMessages([]);
+    setHistoryLoaded(true);
+    setConvListOpen(false);
+    setArtifact(null);
+  }
+
+  function openConversation(id: string) {
+    setActiveConversationId(id);
+    setConvListOpen(false);
   }
 
   const canSend = !busy && (input.trim().length > 0 || !!attachment);
@@ -362,10 +452,95 @@ export function QuestChatClient({
         <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.04em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           IA · {projectTitle}
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, position: "relative" }}>
           <span style={{ fontSize: 10, color: "var(--muted)" }}>
             {quota.used} / {quota.limit}
           </span>
+          {!minimized && (
+            <>
+              <button
+                onClick={() => setConvListOpen((v) => !v)}
+                aria-label="Historique des conversations"
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 6,
+                  color: "var(--muted)",
+                  width: 22,
+                  height: 22,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <HistoryIcon />
+              </button>
+              <button
+                onClick={startNewConversation}
+                aria-label="Nouvelle conversation"
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 6,
+                  color: "var(--muted)",
+                  width: 22,
+                  height: 22,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <PlusIcon />
+              </button>
+              {convListOpen && (
+                <div
+                  className="panel"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    zIndex: 30,
+                    padding: 6,
+                    minWidth: 220,
+                    maxHeight: 260,
+                    overflowY: "auto",
+                  }}
+                >
+                  {conversations.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "var(--muted)", padding: "8px 10px" }}>
+                      Aucune conversation pour l&apos;instant.
+                    </div>
+                  ) : (
+                    conversations.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => openConversation(c.id)}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          background: c.id === activeConversationId ? "var(--surface-subtle)" : "transparent",
+                          border: "none",
+                          borderRadius: 6,
+                          color: "var(--text)",
+                          padding: "8px 10px",
+                          fontSize: 12.5,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {c.title}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
           <button
             onClick={() => setMinimized((v) => !v)}
             aria-label={minimized ? "Agrandir" : "Réduire"}
@@ -389,7 +564,7 @@ export function QuestChatClient({
 
       {!minimized && <div style={{ padding: 20 }}>
         <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
-          {messages.length === 0 && !busy && (
+          {historyLoaded && messages.length === 0 && !busy && (
             <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
               Pose n&apos;importe quelle question sur ton projet — je connais déjà ton schéma et tes quêtes en cours.
             </p>
