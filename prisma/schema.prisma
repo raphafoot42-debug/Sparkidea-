@@ -100,6 +100,7 @@ model Idea {
   goals         Goal[]
   quests        Quest[]
   checkIns      CheckIn[]
+  conversations Conversation[]
 
   @@index([userId])
 }
@@ -114,6 +115,46 @@ model Idea {
 // impossible de mesurer un résultat réel plutôt qu'un simple effort déclaré.
 // Nullable : un objectif peut être créé avant que l'utilisateur ne précise
 // de cible chiffrée (l'UI la lui demande, mais on ne bloque pas s'il l'ignore).
+// Historique du chat IA du projet (l'assistant flottant, QuestChatClient).
+// Avant : les messages ne vivaient que dans le state React du navigateur —
+// perdus au rafraîchissement, à la navigation entre pages, ou en revenant
+// le lendemain. Un client qui a raconté son problème à l'IA et qui la
+// retrouve amnésique juste après avoir changé de page, ça agace à raison.
+// Chaque échange (message utilisateur + réponse IA) est maintenant
+// enregistré ici, ce qui permet aussi d'envoyer un vrai historique à
+// Claude (voir answerProjectChatMessage) au lieu d'un message isolé sans
+// contexte de ce qui vient d'être dit juste avant.
+// Une conversation = un fil de discussion avec l'assistant IA du projet,
+// comme sur Claude.ai. Le CONTEXTE du projet (schéma, quêtes) reste
+// toujours connu de l'IA quelle que soit la conversation active — seul
+// l'historique des MESSAGES est séparé par conversation, pour permettre
+// de repartir sur un sujet propre sans que d'anciens échanges polluent le
+// contexte envoyé à l'IA (voir answerProjectChatMessage).
+model Conversation {
+  id        String   @id @default(cuid())
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  // Généré côté serveur à partir du début du premier message envoyé — pas
+  // d'appel IA pour ça, coût nul (voir app/api/quests/chat/route.ts).
+  title     String   @default("Nouvelle conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  ChatMessage[]
+
+  @@index([ideaId, updatedAt])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String   // "user" | "assistant"
+  text           String
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
 model Goal {
   id            String   @id @default(cuid())
   ideaId        String
