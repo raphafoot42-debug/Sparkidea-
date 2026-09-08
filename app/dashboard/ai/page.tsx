@@ -1,59 +1,13 @@
-import { hasDashboardAccess } from "@/lib/trial";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db"; 
-import { DrawerNav } from "@/components/DrawerNav";
-import { AnimatedGrid } from "@/components/AnimatedGrid";
-import { QuestChatClient } from "@/components/QuestChatClient";
-import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
 
-export default async function AiPage({
-  searchParams,
-}: {
-  searchParams: { idea?: string };
-}) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (!hasDashboardAccess(user)) redirect("/dashboard/settings?blocked=1");
-
-  const idea = searchParams.idea
-    ? await db.idea.findFirst({ where: { id: searchParams.idea, userId: user.id } })
-    : await db.idea.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
-
-  const planKey = toPlanKey(user.plan);
-  const limit = QUEST_CHAT_MESSAGE_LIMITS[planKey];
-  const usedThisMonth = await db.usageLog.count({
-    where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
-  });
-
-  return (
-    <div style={{ position: "relative", minHeight: "100vh" }}>
-      <AnimatedGrid intensity="discrete" />
-      <DrawerNav />
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "80px 20px 60px",
-        }}
-      >
-        {idea ? (
-          <QuestChatClient
-            ideaId={idea.id}
-            projectTitle={JSON.parse(idea.schemaData).projectTitle ?? idea.title}
-            quota={{ used: usedThisMonth, limit }}
-          />
-        ) : (
-          <div className="panel" style={{ padding: 20, textAlign: "center", maxWidth: 480 }}>
-            <p style={{ fontSize: 13.5, color: "var(--muted)" }}>
-              Crée d&apos;abord un projet pour pouvoir parler à son IA dédiée.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+// Cette page est retirée : elle faisait doublon avec l'assistant flottant
+// (QuestChatClient), déjà monté sur /dashboard et /dashboard/quests, et
+// surtout elle IGNORAIT le paramètre questId — cliquer "Demander à l'IA"
+// depuis une quête précise ouvrait un assistant vide, sans rapport avec
+// la quête concernée. Ce bouton envoie maintenant directement le prompt à
+// l'assistant flottant sans navigation (voir AllQuestsClient.tsx et
+// l'événement "spark:ask-ai" écouté dans QuestChatClient.tsx).
+// On garde cette redirection pour ne pas casser un ancien lien/favori.
+export default function AiPageRedirect({ searchParams }: { searchParams: { idea?: string } }) {
+  redirect(searchParams.idea ? `/dashboard?idea=${searchParams.idea}` : "/dashboard");
 }

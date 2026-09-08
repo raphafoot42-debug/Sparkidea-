@@ -12,6 +12,20 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Récupère le prénom déjà donné sur la landing page ("C'est comment ton
+  // prénom ?", avant même l'inscription) — avant, cette info était utilisée
+  // une fois pour l'analyse gratuite puis jetée, jamais reliée au compte.
+  function readPendingFirstName(): string | undefined {
+    try {
+      const raw = sessionStorage.getItem("spark_pending_schema");
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw);
+      return typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -20,7 +34,7 @@ export default function SignupPage() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, firstName: readPendingFirstName() }),
     });
     const data = await res.json();
 

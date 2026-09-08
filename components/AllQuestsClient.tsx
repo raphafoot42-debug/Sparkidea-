@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
 
 type QuestItem = {
@@ -16,6 +15,32 @@ const TRACK_LABELS: Record<string, string> = {
   marketing: "Marketing",
   technique: "Technique",
 };
+
+// Repère le prompt prêt à coller que l'IA a inclus dans le détail d'une
+// quête technique (voir TRACK_GUIDANCE.technique dans quest-generator.ts —
+// toujours introduit par "PROMPT À UTILISER AVEC TON IA :"). S'il n'y en a
+// pas (quête marketing, ou ancienne quête générée avant ce format), on
+// retombe sur le titre + détail complet, pour que le bouton envoie quand
+// même quelque chose d'utile plutôt que rien.
+function extractReadyPrompt(quest: QuestItem): string {
+  const marker = "PROMPT À UTILISER AVEC TON IA :";
+  const idx = quest.detail.indexOf(marker);
+  if (idx === -1) return `${quest.title}\n\n${quest.detail}`;
+  return quest.detail
+    .slice(idx + marker.length)
+    .trim()
+    .replace(/^"|"$/g, ""); // retire les guillemets englobants s'il y en a
+}
+
+// Envoie directement le prompt de la quête à l'assistant IA flottant —
+// aucune navigation, aucun copier-coller manuel. Avant, ce bouton menait
+// vers /dashboard/ai, une page séparée qui ignorait totalement quelle
+// quête avait été cliquée : un assistant vide, sans rapport avec ce qui
+// venait de se passer. L'assistant écoute cet événement (voir
+// QuestChatClient.tsx) et s'ouvre avec le message déjà envoyé.
+function askAIAboutQuest(quest: QuestItem) {
+  window.dispatchEvent(new CustomEvent("spark:ask-ai", { detail: extractReadyPrompt(quest) }));
+}
 
 function QuestOfDayCard({
   quest,
@@ -54,9 +79,12 @@ function QuestOfDayCard({
           {error && <div className="error-text">{error}</div>}
 
           <div style={{ textAlign: "center", marginTop: 12 }}>
-            <Link href={`/dashboard/ai?idea=${activeIdeaId}&questId=${quest.id}`} style={{ fontSize: 11.5, color: "var(--muted)" }}>
+            <button
+              onClick={() => askAIAboutQuest(quest)}
+              style={{ background: "transparent", border: "none", color: "var(--muted)", fontSize: 11.5, cursor: "pointer", padding: 0, textDecoration: "underline" }}
+            >
               Toujours pas clair ? Demander à l&apos;IA →
-            </Link>
+            </button>
           </div>
         </div>
       ) : (
@@ -132,8 +160,14 @@ export function AllQuestsClient({
   return (
     <div style={{ width: "100%", maxWidth: 900 }}>
       <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Quêtes — {projectTitle}</h1>
-      <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 10 }}>
-        3 quêtes marketing + 3 quêtes technique par lot, pour gagner de l&apos;argent le plus vite possible.
+      <p style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 4 }}>
+        Un nombre de quêtes marketing et technique qui s&apos;adapte à ton avancement, pour gagner de l&apos;argent le plus vite possible.
+      </p>
+      <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
+        Pour des quêtes toujours pertinentes,{" "}
+        <a href={`/dashboard?idea=${activeIdeaId}`} style={{ color: "var(--line)" }}>
+          garde ton schéma à jour dans le dashboard →
+        </a>
       </p>
 
       <div style={{ marginBottom: 22, maxWidth: 340 }}>
@@ -314,9 +348,13 @@ export function AllQuestsClient({
             <p style={{ fontSize: 15, lineHeight: 1.8, color: "#e2e8f0", whiteSpace: "pre-line", marginBottom: 24 }}>
               {detailQuest.detail}
             </p>
-            <Link href={`/dashboard/ai?idea=${activeIdeaId}&questId=${detailQuest.id}`} className="btn-secondary" style={{ fontSize: 12.5 }}>
+            <button
+              onClick={() => askAIAboutQuest(detailQuest)}
+              className="btn-secondary"
+              style={{ fontSize: 12.5 }}
+            >
               Toujours pas clair ? Demander à l&apos;IA →
-            </Link>
+            </button>
           </div>
         </div>
       )}

@@ -329,7 +329,13 @@ export async function answerProjectChatMessage(
   // dans la même conversation. On plafonne le nombre de tours envoyés côté
   // appelant (voir route.ts) pour ne pas laisser le coût grimper sans
   // limite sur une conversation qui traîne en longueur.
-  history: { role: "user" | "assistant"; text: string }[] = []
+  history: { role: "user" | "assistant"; text: string }[] = [],
+  // Prénom donné par l'utilisateur avant même son inscription (écran
+  // "C'est comment ton prénom ?" sur la landing) — permet à l'IA de
+  // s'adresser à lui par son prénom plutôt que rester impersonnelle.
+  // Optionnel : certains comptes n'en ont pas (inscription directe sans
+  // passer par le générateur gratuit).
+  firstName?: string
 ): Promise<{ reply: string }> {
   const questsText = activeQuests.length
     ? activeQuests.map((q) => `- [${q.track}] ${q.title}`).join("\n")
@@ -340,7 +346,7 @@ export async function answerProjectChatMessage(
     .join("\n");
 
   const system = `Tu es l'IA personnelle du projet "${projectTitle}" sur Spark Idea. Tu es un cerveau dédié à CE projet précis — l'utilisateur peut te parler librement de n'importe quel souci ou question, pas seulement d'une quête précise.
-
+${firstName ? `\nL'utilisateur s'appelle ${firstName}. Utilise son prénom naturellement de temps en temps (pas à chaque message, ça deviendrait lourd) — surtout pour l'accueillir au tout début d'une nouvelle conversation, ou pour une touche personnelle sur un moment important (une quête terminée, une bonne nouvelle). Ne le force jamais artificiellement dans chaque phrase.\n` : ""}
 CONTEXTE DU PROJET :
 Score global : ${schema.overallScore}/10
 ${criteriaText}

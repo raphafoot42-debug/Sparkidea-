@@ -27,6 +27,12 @@ model User {
   id                String   @id @default(cuid())
   email             String   @unique
   passwordHash      String
+  // Collecté sur la landing page avant l'inscription (l'idée + le
+  // schéma gratuits demandent déjà "C'est comment ton prénom ?") — avant,
+  // cette info était utilisée une fois pour personnaliser l'analyse
+  // initiale puis jetée : jamais sauvegardée sur le compte, donc perdue
+  // pour toute la suite (l'IA du dashboard ne le connaissait jamais).
+  firstName         String?
   isAdmin           Boolean  @default(false)
   createdAt         DateTime @default(now())
   lastLoginAt       DateTime?

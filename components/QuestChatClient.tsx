@@ -103,6 +103,18 @@ function CloseIcon() {
     </svg>
   );
 }
+function ChatBubbleIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <path
+        d="M4 5.5h14a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 // Bulle "l'IA réfléchit" — trois points qui pulsent, dans une bulle assistant
 // normale, à gauche comme le reste des réponses. Remplace le simple "..."
@@ -147,10 +159,12 @@ export function QuestChatClient({
   ideaId,
   projectTitle,
   quota,
+  firstName,
 }: {
   ideaId: string;
   projectTitle: string;
   quota: { used: number; limit: number };
+  firstName?: string;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -206,7 +220,36 @@ export function QuestChatClient({
     return () => {
       cancelled = true;
     };
+    // Avant : dépendance sur [ideaId] au lieu de [activeConversationId] —
+    // donc changer de conversation dans la liste ne rechargeait jamais les
+    // messages, seul le premier montage du composant le faisait.
   }, [activeConversationId]);
+
+  // Reçoit une demande venant du bouton "Demander à l'IA" d'une quête
+  // (AllQuestsClient) — ouvre l'assistant et envoie le prompt tout de
+  // suite, sans navigation ni copier-coller manuel. Avant, ce bouton
+  // renvoyait vers une page séparée (/dashboard/ai) qui ignorait
+  // complètement la quête concernée — un assistant vide, sans rapport
+  // avec ce qui venait d'être cliqué.
+  //
+  // sendRef : la fonction send() dépend de plusieurs états qui changent
+  // (conversation active, saisie en cours...) — sans cette référence
+  // toujours à jour, l'écouteur figerait send() sur son tout premier
+  // rendu et enverrait le prompt vers une conversation obsolète.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  useEffect(() => {
+    function onAskAI(e: Event) {
+      const prompt = (e as CustomEvent<string>).detail;
+      if (!prompt) return;
+      setMinimized(false);
+      sendRef.current(prompt);
+    }
+    window.addEventListener("spark:ask-ai", onAskAI);
+    return () => window.removeEventListener("spark:ask-ai", onAskAI);
+  }, []);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,21 +262,18 @@ export function QuestChatClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // ---------------------------------------------------------------------
-  // Fenêtre flottante déplaçable — position libre dans le dashboard.
-  // ---------------------------------------------------------------------
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  const [minimized, setMinimized] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
-  const CARD_WIDTH = 480;
+  const CARD_WIDTH = 400;
 
-  // Sur mobile/tablette (écran étroit), la fenêtre flottante librement
-  // déplaçable est difficile à manier — on bascule sur un panneau ancré en
-  // bas de l'écran, pleine largeur, sans glisser-déposer. Décidé avec
-  // Raphaël : le flottant reste sur desktop, mais doit être "maniable"
-  // partout, pas juste joli.
+  // Ancré en bas à droite, comme un chat professionnel standard
+  // (Intercom, Crisp) — plus de glisser-déposer. Avant, la fenêtre pouvait
+  // être traînée n'importe où et démarrait près du panneau "Analyse en
+  // direct" de MindMap.tsx (aussi fixé en haut à droite), ce qui créait
+  // un chevauchement confus entre deux widgets IA différents. Fixer
+  // l'assistant en bas à droite règle ça sans toucher à l'autre panneau,
+  // et simplifie beaucoup le code (plus d'état de position, de calcul de
+  // limites d'écran, ni d'écouteurs pointermove/pointerup).
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     function checkMobile() {
@@ -243,45 +283,6 @@ export function QuestChatClient({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  // Empêche la fenêtre de sortir de l'écran (impossible à rattraper sinon).
-  function clamp(x: number, y: number) {
-    const w = Math.min(CARD_WIDTH, window.innerWidth - 32);
-    const h = minimized ? 48 : 40; // hauteur mini de la barre visible à garder à l'écran
-    return {
-      x: Math.min(Math.max(x, 8), window.innerWidth - w - 8),
-      y: Math.min(Math.max(y, 8), window.innerHeight - h - 8),
-    };
-  }
-
-  useEffect(() => {
-    setPos(clamp(window.innerWidth - CARD_WIDTH - 60, window.innerHeight / 2 - 220));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!dragging || isMobile) return;
-    function onMove(e: PointerEvent) {
-      setPos(clamp(e.clientX - dragOffset.current.x, e.clientY - dragOffset.current.y));
-    }
-    function onUp() {
-      setDragging(false);
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, [dragging, isMobile]);
-
-  function onHandlePointerDown(e: React.PointerEvent) {
-    if (isMobile) return; // pas de glisser-déposer sur mobile, ancré en bas
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    setDragging(true);
-  }
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -335,12 +336,12 @@ export function QuestChatClient({
     recognition.start();
   }
 
-  async function send() {
-    const msg = input.trim();
+  async function send(overrideText?: string) {
+    const msg = (overrideText ?? input).trim();
     if ((!msg && !attachment) || busy) return;
     setBusy(true);
     setError(null);
-    setInput("");
+    if (overrideText === undefined) setInput("");
     const sentAttachment = attachment;
     setAttachment(null);
     setMessages((m) => [...m, { role: "user", text: msg || "(photo jointe)", imagePreview: sentAttachment?.previewUrl }]);
@@ -399,6 +400,37 @@ export function QuestChatClient({
 
   const canSend = !busy && (input.trim().length > 0 || !!attachment);
 
+  // Réduit : juste une bulle ronde, ancrée en bas à droite, jamais
+  // draggable — clique pour rouvrir. Standard des chats professionnels
+  // (Intercom, Crisp), et ça ne peut plus jamais chevaucher un autre
+  // panneau de la page puisque la position est toujours la même.
+  if (minimized) {
+    return (
+      <button
+        onClick={() => setMinimized(false)}
+        aria-label="Ouvrir l'assistant IA"
+        className="panel"
+        style={{
+          position: "fixed",
+          right: 20,
+          bottom: 20,
+          width: 52,
+          height: 52,
+          borderRadius: "50%",
+          zIndex: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          color: "var(--line)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        }}
+      >
+        <ChatBubbleIcon />
+      </button>
+    );
+  }
+
   return (
     <>
     <div
@@ -417,34 +449,32 @@ export function QuestChatClient({
               padding: 0,
               borderRadius: "16px 16px 0 0",
               boxShadow: "0 -8px 30px rgba(0,0,0,0.5)",
-              maxHeight: minimized ? undefined : "75vh",
+              maxHeight: "75vh",
               display: "flex",
               flexDirection: "column",
             }
           : {
               position: "fixed",
-              left: pos.x,
-              top: pos.y,
+              right: 20,
+              bottom: 20,
               width: CARD_WIDTH,
               maxWidth: "calc(100vw - 32px)",
+              maxHeight: "min(640px, calc(100vh - 40px))",
               zIndex: 20,
               padding: 0,
               boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-              cursor: dragging ? "grabbing" : "default",
-              userSelect: dragging ? "none" : "auto",
+              display: "flex",
+              flexDirection: "column",
             }
       }
     >
       <div
-        onPointerDown={onHandlePointerDown}
         style={{
           padding: "10px 14px",
-          borderBottom: minimized ? "none" : "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          cursor: isMobile ? "default" : "grab",
-          userSelect: "none",
           gap: 10,
           flexShrink: 0,
         }}
@@ -456,94 +486,92 @@ export function QuestChatClient({
           <span style={{ fontSize: 10, color: "var(--muted)" }}>
             {quota.used} / {quota.limit}
           </span>
-          {!minimized && (
-            <>
-              <button
-                onClick={() => setConvListOpen((v) => !v)}
-                aria-label="Historique des conversations"
+          <>
+            <button
+              onClick={() => setConvListOpen((v) => !v)}
+              aria-label="Historique des conversations"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 6,
+                color: "var(--muted)",
+                width: 22,
+                height: 22,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <HistoryIcon />
+            </button>
+            <button
+              onClick={startNewConversation}
+              aria-label="Nouvelle conversation"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 6,
+                color: "var(--muted)",
+                width: 22,
+                height: 22,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PlusIcon />
+            </button>
+            {convListOpen && (
+              <div
+                className="panel"
                 style={{
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 6,
-                  color: "var(--muted)",
-                  width: 22,
-                  height: 22,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  zIndex: 30,
+                  padding: 6,
+                  minWidth: 220,
+                  maxHeight: 260,
+                  overflowY: "auto",
                 }}
               >
-                <HistoryIcon />
-              </button>
-              <button
-                onClick={startNewConversation}
-                aria-label="Nouvelle conversation"
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 6,
-                  color: "var(--muted)",
-                  width: 22,
-                  height: 22,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <PlusIcon />
-              </button>
-              {convListOpen && (
-                <div
-                  className="panel"
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    right: 0,
-                    zIndex: 30,
-                    padding: 6,
-                    minWidth: 220,
-                    maxHeight: 260,
-                    overflowY: "auto",
-                  }}
-                >
-                  {conversations.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "var(--muted)", padding: "8px 10px" }}>
-                      Aucune conversation pour l&apos;instant.
-                    </div>
-                  ) : (
-                    conversations.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => openConversation(c.id)}
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          background: c.id === activeConversationId ? "var(--surface-subtle)" : "transparent",
-                          border: "none",
-                          borderRadius: 6,
-                          color: "var(--text)",
-                          padding: "8px 10px",
-                          fontSize: 12.5,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {c.title}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                {conversations.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)", padding: "8px 10px" }}>
+                    Aucune conversation pour l&apos;instant.
+                  </div>
+                ) : (
+                  conversations.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => openConversation(c.id)}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        background: c.id === activeConversationId ? "var(--surface-subtle)" : "transparent",
+                        border: "none",
+                        borderRadius: 6,
+                        color: "var(--text)",
+                        padding: "8px 10px",
+                        fontSize: 12.5,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {c.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </>
           <button
-            onClick={() => setMinimized((v) => !v)}
-            aria-label={minimized ? "Agrandir" : "Réduire"}
+            onClick={() => setMinimized(true)}
+            aria-label="Réduire"
             style={{
               background: "transparent",
               border: "1px solid rgba(255,255,255,0.15)",
@@ -557,7 +585,7 @@ export function QuestChatClient({
               justifyContent: "center",
             }}
           >
-            <ChevronIcon direction={minimized ? "up" : "down"} />
+            <ChevronIcon direction="down" />
           </button>
         </div>
       </div>
@@ -566,7 +594,7 @@ export function QuestChatClient({
         <div className="panel" style={{ padding: 16, marginBottom: 14, minHeight: 160, maxHeight: 300, overflowY: "auto" }}>
           {historyLoaded && messages.length === 0 && !busy && (
             <p style={{ fontSize: 12.5, color: "var(--muted)" }}>
-              Pose n&apos;importe quelle question sur ton projet — je connais déjà ton schéma et tes quêtes en cours.
+              {firstName ? `Salut ${firstName} — pose` : "Pose"}-moi n&apos;importe quelle question sur ton projet, je connais déjà ton schéma et tes quêtes en cours.
             </p>
           )}
           {messages.map((m, i) => (
@@ -710,7 +738,7 @@ export function QuestChatClient({
           </button>
 
           <button
-            onClick={send}
+            onClick={() => send()}
             disabled={!canSend}
             aria-label="Envoyer"
             className="btn-primary"
@@ -731,13 +759,13 @@ export function QuestChatClient({
     {/* Panneau externe — reste ouvert à côté de la fenêtre de chat quand
         l'IA génère du code, comme les "artifacts" de Claude. Sur mobile,
         pas assez de place à côté : il s'affiche empilé sous le chat. */}
-    {artifact && !minimized && (
+    {artifact && (
       <div
         className="panel"
         style={
           isMobile
             ? { position: "fixed", left: 12, right: 12, bottom: "78vh", maxHeight: "20vh", zIndex: 21, padding: 0, display: "flex", flexDirection: "column", overflow: "hidden" }
-            : { position: "fixed", left: Math.max(12, pos.x - 340), top: pos.y, width: 320, maxHeight: 420, zIndex: 21, padding: 0, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", overflow: "hidden" }
+            : { position: "fixed", right: 20 + CARD_WIDTH + 12, bottom: 20, width: 320, maxHeight: "min(640px, calc(100vh - 40px))", zIndex: 21, padding: 0, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", overflow: "hidden" }
         }
       >
         <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>

@@ -370,24 +370,42 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
 // ---------------------------------------------------------------------------
 export async function answerChatMessage(
   currentSchema: SchemaResult,
-  userMessage: string
+  userMessage: string,
+  // Historique récent de cette conversation (hors message actuel) — avant,
+  // chaque appel n'envoyait QUE le dernier message : si l'IA proposait
+  // "option A ou option B" et que l'utilisateur répondait juste "option A",
+  // elle ne savait déjà plus de quoi il parlait. Plafonné à 10 messages
+  // côté appelant pour ne pas laisser le coût grimper sans limite.
+  history: { role: "user" | "assistant"; text: string }[] = [],
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" }
 ): Promise<{ reply: string; newNode?: z.infer<typeof NodeSchema> }> {
   const system = `Tu es l'assistant IA de Spark Idea. Tu discutes avec l'utilisateur UNIQUEMENT à propos du projet "${currentSchema.projectTitle}", dont voici l'état actuel du schéma :
 
 ${JSON.stringify(currentSchema.nodes, null, 2)}
 
 RÈGLES :
+- Tu as accès à l'historique récent de cette conversation ci-dessous — appuie-toi dessus. Si tu as proposé plusieurs options (A/B, ou une liste) dans un message précédent, et que l'utilisateur répond juste "la première", "option A", ou une réponse courte qui ne fait sens qu'à la lumière de ce que TU viens de proposer, comprends la référence au lieu de redemander de préciser.
 - Si l'utilisateur semble parler d'un AUTRE projet (une idée clairement différente, pas liée au projet actuel), signale-le-lui honnêtement et demande confirmation avant de continuer — mais seulement si tu as un vrai doute. Ne demande pas systématiquement, ça deviendrait lourd.
 - Le schéma ci-dessus est un premier jet généré à partir d'une simple description — il reste volontairement général. Ton rôle dans cette conversation est de le compléter : repère ce qui est encore vague ou manquant (cible précise, différenciation réelle, modèle de revenu concret...) et pose UNE question ciblée à la fois pour le préciser, plutôt que d'attendre que l'utilisateur devine quoi te dire.
 - Si la demande de l'utilisateur est vague (ex: "propose-moi des idées", "aide-moi"), pose 1 à 2 questions ciblées avant de répondre, plutôt qu'une réponse générique.
+- Si l'utilisateur a joint une image, regarde-la et base ta réponse dessus.
 - Si l'utilisateur demande d'ajouter un point au schéma, réponds en JSON avec un champ "newNode" (même format que les nœuds existants) en plus de ta réponse texte dans "reply".
 - Réponds en JSON strict : { "reply": "...", "newNode": {...} } — "newNode" est optionnel, ne l'inclus que si un point doit vraiment être ajouté au schéma.`;
+
+  const historyMessages = history.map((h) => ({ role: h.role, content: h.text }));
+
+  const userContent: Anthropic.MessageParam["content"] = image
+    ? [
+        { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } },
+        { type: "text", text: userMessage },
+      ]
+    : userMessage;
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 600,
     system,
-    messages: [{ role: "user", content: userMessage }],
+    messages: [...historyMessages, { role: "user", content: userContent }],
   });
 
   const textBlock = message.content.find((b) => b.type === "text");
