@@ -6,7 +6,7 @@ import { DrawerNav } from "@/components/DrawerNav";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { AnalyseClient } from "@/components/AnalyseClient";
-import { generateProjectAnalysis } from "@/lib/ai/analysis-generator";
+import { generateStrategicAnalysis, generateProgressSummary, type StrategicAnalysis } from "@/lib/ai/analysis-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function AnalysePage({
@@ -43,7 +43,25 @@ export default async function AnalysePage({
   const latest = checkIns[checkIns.length - 1];
   const schema = JSON.parse(activeIdea.schemaData) as SchemaResult;
 
-  const analysis = await generateProjectAnalysis(schema, {
+  // Analyse stratégique — mise en cache sur l'idée elle-même (voir
+  // prisma/schema.prisma, champ analysisData). Générée une seule fois,
+  // jamais à chaque visite : c'est un document long et coûteux à produire
+  // pour un contenu qui ne change pas tout seul entre deux visites.
+  let strategicAnalysis: StrategicAnalysis;
+  if (activeIdea.analysisData) {
+    strategicAnalysis = JSON.parse(activeIdea.analysisData);
+  } else {
+    strategicAnalysis = await generateStrategicAnalysis(schema);
+    await db.idea.update({
+      where: { id: activeIdea.id },
+      data: { analysisData: JSON.stringify(strategicAnalysis) },
+    });
+  }
+
+  // Le paragraphe de progression, lui, reste léger et se régénère à
+  // chaque visite — il dépend des chiffres qui évoluent en continu
+  // (quêtes, check-ins), contrairement à l'analyse stratégique.
+  const progressSummary = await generateProgressSummary(schema, {
     totalDone: quests.length,
     marketingDone: quests.filter((q) => q.track === "marketing").length,
     techniqueDone: quests.filter((q) => q.track === "technique").length,
@@ -73,7 +91,8 @@ export default async function AnalysePage({
 
       <AnalyseClient
         ideaId={activeIdea.id}
-        analysis={analysis}
+        analysis={strategicAnalysis}
+        progressSummary={progressSummary}
         quests={quests.map((q) => ({
           completedAt: (q.completedAt as Date).toISOString(),
           track: q.track as "marketing" | "technique",

@@ -8,7 +8,24 @@ import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from 
 
 const BodySchema = z.object({
   ideaId: z.string(),
-  message: z.string().min(1).max(500),
+  // Avant : 500 caractères max, incohérent avec le chat de l'assistant
+  // personnel (8000). Aligné pour la même raison : un vrai paragraphe ne
+  // doit pas être coupé.
+  message: z.string().min(1).max(8000),
+  // Historique déjà tenu côté client (MindMap.tsx garde ses messages en
+  // mémoire pendant la session) — pas besoin d'une nouvelle table en base
+  // pour ce chat-là, on renvoie juste ce qui existe déjà. Plafonné à 10
+  // messages côté client avant l'envoi.
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), text: z.string() }))
+    .max(10)
+    .optional(),
+  image: z
+    .object({
+      base64: z.string().max(8_000_000),
+      mediaType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
+    })
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -32,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  const { ideaId, message } = parsed.data;
+  const { ideaId, message, history, image } = parsed.data;
 
   // --- Isolation stricte entre projets ---
   // On ne charge QUE l'idée demandée, ET seulement si elle appartient bien
@@ -90,7 +107,12 @@ export async function POST(req: NextRequest) {
   const currentSchema = JSON.parse(idea.schemaData) as SchemaResult;
 
   try {
-    const result = await answerChatMessage(currentSchema, message);
+    const latestCheckIn = await db.checkIn.findFirst({
+      where: { ideaId: idea.id },
+      orderBy: { createdAt: "desc" },
+      select: { clients: true, revenue: true, audience: true },
+    });
+    const result = await answerChatMessage(currentSchema, message, history ?? [], image, latestCheckIn);
 
     await db.usageLog.create({ data: { userId: user.id, source: "schema" } });
     if (user.subscriptionStatus === "TRIAL") {

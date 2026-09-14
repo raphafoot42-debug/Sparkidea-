@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { resend } from "@/lib/email/resend";
+import { sendEmail } from "@/lib/email/send";
 import { buildDailyDigestEmail } from "@/lib/email/daily-digest";
 
 export const dynamic = "force-dynamic";
@@ -52,12 +52,12 @@ export async function GET(req: Request) {
 
     try {
       // "onboarding@resend.dev" = adresse de test fournie par Resend, qui
-      // marche sans configurer de domaine. Limitée en volume et moins pro
-      // pour l'utilisateur final — à remplacer par une adresse sur ton
-      // propre domaine (ex: hello@spark-idea.app) une fois un domaine
-      // vérifié dans Resend (Domains → Add Domain → enregistrements DNS).
-      await resend.emails.send({
-        from: "Spark Idea <onboarding@resend.dev>",
+      // Solution temporaire via Gmail (voir lib/email/send.ts) — Resend
+      // seul ne marche pas sans domaine vérifié pour envoyer à autre chose
+      // que l'adresse du compte Resend lui-même. À remplacer une fois un
+      // domaine vérifié (Resend → Domains → Add Domain → enregistrements
+      // DNS) : il suffira de changer lib/email/send.ts, rien d'autre ici.
+      await sendEmail({
         to: user.email,
         subject,
         html,

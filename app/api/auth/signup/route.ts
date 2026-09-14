@@ -6,6 +6,9 @@ import { createSession, hashPassword } from "@/lib/auth";
 const BodySchema = z.object({
   email: z.string().email("Email invalide."),
   password: z.string().min(8, "8 caractères minimum."),
+  // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé
+  // par le tunnel "génère ton idée d'abord" (ex: lien direct vers /signup).
+  firstName: z.string().trim().max(30).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -18,7 +21,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, firstName } = parsed.data;
 
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
@@ -35,6 +38,7 @@ export async function POST(req: NextRequest) {
     data: {
       email,
       passwordHash,
+      firstName: firstName || undefined,
       subscriptionStatus: "TRIAL",
       trialStartedAt: new Date(),
     },

@@ -68,9 +68,19 @@ async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Tra
   });
   const otherTrackCompleted = otherTrackDone.map((q) => q.title);
 
+  // Derniers chiffres réels déclarés par l'utilisateur (voir AnalyseClient.tsx
+  // où il les saisit) — avant, seul le système de Prestige à 100% s'en
+  // servait. Maintenant la génération de quêtes du quotidien en tient
+  // compte aussi (voir checkInBlock dans quest-generator.ts).
+  const latestCheckIn = await db.checkIn.findFirst({
+    where: { ideaId },
+    orderBy: { createdAt: "desc" },
+    select: { clients: true, revenue: true, audience: true },
+  });
+
   let batch;
   try {
-    batch = await generateQuestBatch(schema, track, lastStageLabel, completedTitles, goals, otherTrackCompleted);
+    batch = await generateQuestBatch(schema, track, lastStageLabel, completedTitles, goals, otherTrackCompleted, latestCheckIn);
   } catch (err) {
     // Garde-fou critique : avant, un échec ici (JSON mal formé renvoyé par
     // l'IA, erreur réseau...) repartait les mains vides — "pending" restait

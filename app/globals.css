@@ -174,3 +174,15 @@ textarea {
   line-height: 1;
   cursor: pointer;
 }
+
+/* Flèches entre les étapes de la séquence "comment ça marche" — visibles
+   uniquement sur écran assez large, sinon elles encombrent le passage à
+   la ligne des cartes sur mobile. */
+.landing-arrow {
+  display: none;
+}
+@media (min-width: 900px) {
+  .landing-arrow {
+    display: inline-block !important;
+  }
+}

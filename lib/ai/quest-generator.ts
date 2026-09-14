@@ -115,7 +115,14 @@ export async function generateQuestBatch(
   lastStageLabel: string | null,
   completedTitles: string[],
   goals: string[],
-  otherTrackCompleted: string[] = []
+  otherTrackCompleted: string[] = [],
+  // Derniers chiffres déclarés par l'utilisateur (clients/revenu/audience)
+  // — avant, seul le système de Prestige (déclenché à 100% d'un objectif)
+  // en tenait compte. La génération de quêtes du quotidien l'ignorait
+  // complètement : impossible de proposer "automatise/délègue" une fois
+  // du revenu réel obtenu, seulement du texte générique dans le prompt
+  // sans aucun signal concret pour le déclencher.
+  latestCheckIn: { clients: number; revenue: number; audience: number } | null = null
 ): Promise<QuestBatchResult> {
   const historyBlock =
     completedTitles.length > 0
@@ -138,6 +145,10 @@ export async function generateQuestBatch(
           .join("\n")}`
       : `Rien de fait pour l'instant sur l'autre piste ("${otherTrack}").`;
 
+  const checkInBlock = latestCheckIn
+    ? `CHIFFRES RÉELS DÉCLARÉS PAR L'UTILISATEUR : ${latestCheckIn.clients} clients, ${latestCheckIn.revenue}€ de revenu, ${latestCheckIn.audience} d'audience. C'est un signal concret, pas une supposition : s'il y a déjà du revenu réel (> 0€), les prochaines quêtes doivent viser à l'AUGMENTER et le STABILISER (fidélisation, montée en gamme, automatisation de ce qui marche déjà) plutôt que repartir sur des bases de démarrage déjà dépassées. S'il y a des clients mais peu ou pas de revenu, le problème est la monétisation, pas l'acquisition — oriente les quêtes là-dessus en priorité.`
+    : `Aucun chiffre déclaré pour l'instant — reste sur les bases (construire, valider, préparer la première vente).`;
+
   const productReadinessRule =
     track === "marketing"
       ? `\n7. GARDE-FOU IMPORTANT : ne propose JAMAIS une quête qui suppose que le produit/service existe déjà et est utilisable (ex: "trouve tes 5 premiers clients", "démarche des entreprises pour vendre", "récolte des avis clients") tant que la piste technique (voir ci-dessus) ne montre pas qu'une version utilisable existe. Si ce n'est pas encore le cas, oriente le marketing vers ce qui ne nécessite PAS de produit fini : valider l'idée auprès de vraies personnes, construire une audience, une liste d'attente, du contenu qui prépare le lancement. Vendre un produit qui n'existe pas encore, c'est ce qu'on veut éviter à tout prix.`
@@ -152,6 +163,8 @@ ${schema.nodes.map((n) => `- [${n.type}] ${n.label} : ${n.comment}`).join("\n")}
 ${TRACK_GUIDANCE[track]}
 
 ${goalBlock}
+
+${checkInBlock}
 
 ${otherTrackBlock}
 
@@ -329,7 +342,13 @@ export async function answerProjectChatMessage(
   // dans la même conversation. On plafonne le nombre de tours envoyés côté
   // appelant (voir route.ts) pour ne pas laisser le coût grimper sans
   // limite sur une conversation qui traîne en longueur.
-  history: { role: "user" | "assistant"; text: string }[] = []
+  history: { role: "user" | "assistant"; text: string }[] = [],
+  // Prénom donné par l'utilisateur avant même son inscription (écran
+  // "C'est comment ton prénom ?" sur la landing) — permet à l'IA de
+  // s'adresser à lui par son prénom plutôt que rester impersonnelle.
+  // Optionnel : certains comptes n'en ont pas (inscription directe sans
+  // passer par le générateur gratuit).
+  firstName?: string
 ): Promise<{ reply: string }> {
   const questsText = activeQuests.length
     ? activeQuests.map((q) => `- [${q.track}] ${q.title}`).join("\n")
@@ -340,7 +359,7 @@ export async function answerProjectChatMessage(
     .join("\n");
 
   const system = `Tu es l'IA personnelle du projet "${projectTitle}" sur Spark Idea. Tu es un cerveau dédié à CE projet précis — l'utilisateur peut te parler librement de n'importe quel souci ou question, pas seulement d'une quête précise.
-
+${firstName ? `\nL'utilisateur s'appelle ${firstName}. Utilise son prénom naturellement de temps en temps (pas à chaque message, ça deviendrait lourd) — surtout pour l'accueillir au tout début d'une nouvelle conversation, ou pour une touche personnelle sur un moment important (une quête terminée, une bonne nouvelle). Ne le force jamais artificiellement dans chaque phrase.\n` : ""}
 CONTEXTE DU PROJET :
 Score global : ${schema.overallScore}/10
 ${criteriaText}

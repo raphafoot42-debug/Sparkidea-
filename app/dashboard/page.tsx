@@ -79,6 +79,17 @@ export default async function DashboardPage({
 
   const schema = JSON.parse(activeIdea.schemaData) as SchemaResult;
 
+  // Sert à faire évoluer la question posée dans le panneau du haut à
+  // droite (voir MindMap.tsx) une fois qu'un vrai revenu est déclaré —
+  // avant, cette question ne se posait qu'une seule fois au tout début,
+  // jamais réévaluée après un vrai changement de stade du projet.
+  const latestCheckIn = await db.checkIn.findFirst({
+    where: { ideaId: activeIdea.id },
+    orderBy: { createdAt: "desc" },
+    select: { revenue: true },
+  });
+  const hasRevenue = (latestCheckIn?.revenue ?? 0) > 0;
+
   try {
     await ensureQuestBatch(activeIdea.id, schema);
   } catch (err) {
@@ -108,19 +119,11 @@ export default async function DashboardPage({
             <TrialBanner trialStartedAt={user.trialStartedAt} trialMessagesUsed={user.trialMessagesUsed} />
           </div>
         )}
-        <div style={{ width: "100%", maxWidth: 640, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{ width: "100%", maxWidth: 640 }}>
           {activeIdea.shareToken && activeIdea.shareViews > 0 && (
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>
-              {activeIdea.shareViews} vues
-            </span>
-          )}
-          <ShareButton />
-          {HAS_PDF_EXPORT[toPlanKey(user.plan)] ? (
-            <ExportPdfButton schema={schema} />
-          ) : (
-            <Link href="/pricing" style={{ fontSize: 11.5, color: "var(--muted)" }}>
-              Export PDF avec Pro →
-            </Link>
+            <div style={{ textAlign: "right", marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>{activeIdea.shareViews} vues</span>
+            </div>
           )}
         </div>
         <ProjectSwitcher projects={allIdeas} activeIdeaId={activeIdea.id} />
@@ -137,10 +140,29 @@ export default async function DashboardPage({
 
       {/* Le schéma complet (carte mentale), directement en dessous, même page */}
       <div style={{ position: "relative", zIndex: 2, borderTop: "1px solid var(--border)" }}>
-        <div style={{ textAlign: "center", padding: "18px 20px 0", fontSize: 12, color: "var(--muted)" }}>
-          Schéma complet du projet
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 14,
+            padding: "18px 20px 0",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 12, color: "var(--muted)" }}>Schéma complet du projet</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShareButton />
+            {HAS_PDF_EXPORT[toPlanKey(user.plan)] ? (
+              <ExportPdfButton schema={schema} />
+            ) : (
+              <Link href="/pricing" className="btn-secondary" style={{ fontSize: 12, padding: "5px 12px" }}>
+                PDF (Pro)
+              </Link>
+            )}
+          </div>
         </div>
-        <DashboardClient ideaId={activeIdea.id} initialSchema={schema} />
+        <DashboardClient ideaId={activeIdea.id} initialSchema={schema} hasRevenue={hasRevenue} />
       </div>
 
       {/* Assistant IA personnel du projet — flottant, toujours disponible
@@ -152,6 +174,7 @@ export default async function DashboardPage({
         ideaId={activeIdea.id}
         projectTitle={schema.projectTitle ?? activeIdea.title}
         quota={{ used: aiUsedThisMonth, limit: aiMessageLimit }}
+        firstName={user.firstName ?? undefined}
       />
     </div>
   );

@@ -156,7 +156,8 @@ export async function POST(req: NextRequest) {
       activeQuests,
       parsed.data.message,
       parsed.data.image,
-      history
+      history,
+      user.firstName ?? undefined
     );
     await db.chatMessage.create({
       data: { conversationId: conversation.id, role: "assistant", text: result.reply },

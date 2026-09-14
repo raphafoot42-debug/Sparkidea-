@@ -122,6 +122,7 @@ export default async function QuestsPage({
         ideaId={idea.id}
         projectTitle={schema.projectTitle}
         quota={{ used: aiUsedThisMonth, limit: aiMessageLimit }}
+        firstName={user.firstName ?? undefined}
       />
     </div>
   );
