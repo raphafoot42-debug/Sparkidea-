@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
@@ -11,6 +11,17 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [backUrl, setBackUrl] = useState("/");
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("spark_pending_schema")) {
+        setBackUrl("/result");
+      }
+    } catch {
+      // Ignorer
+    }
+  }, []);
 
   // Récupère le prénom déjà donné sur la landing page ("C'est comment ton
   // prénom ?", avant même l'inscription) — avant, cette info était utilisée
@@ -96,7 +107,7 @@ export default function SignupPage() {
         </button>
 
         <div style={{ textAlign: "center", marginTop: 12 }}>
-          <Link href="/" style={{ fontSize: 12, color: "var(--muted)" }}>
+          <Link href={backUrl} style={{ fontSize: 12, color: "var(--muted)" }}>
             ← Revenir en arrière
           </Link>
         </div>
