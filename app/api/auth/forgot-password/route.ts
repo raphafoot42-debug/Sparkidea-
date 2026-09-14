@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createPasswordResetToken } from "@/lib/auth";
-import { resend } from "@/lib/email/resend";
+import { sendEmail } from "@/lib/email/send";
 
 const BodySchema = z.object({ email: z.string().email("Email invalide.") });
 
@@ -30,8 +30,7 @@ export async function POST(req: NextRequest) {
   const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${token}`;
 
   try {
-    await resend.emails.send({
-      from: "Spark Idea <onboarding@resend.dev>",
+    await sendEmail({
       to: user.email,
       subject: "Réinitialise ton mot de passe Spark Idea",
       html: `

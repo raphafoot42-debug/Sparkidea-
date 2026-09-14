@@ -12,6 +12,12 @@ type Props = {
   // Sinon : chat gratuit, sans sauvegarde.
   freeMode?: boolean;
   onVoirPlus?: () => void;
+  // Y a-t-il déjà du revenu réel déclaré (CheckIn) sur ce projet ? Sert à
+  // redéclencher UNE FOIS la question d'ouverture du panneau quand ce
+  // palier est franchi (avant : la question ne se posait qu'une seule
+  // fois pour toujours, jamais réévaluée après un vrai changement de
+  // stade du projet).
+  hasRevenue?: boolean;
 };
 
 type NodePos = { id: string; x: number; y: number; w: number; h: number };
@@ -37,9 +43,26 @@ function layoutNodes(schema: SchemaResult): NodePos[] {
   return positions;
 }
 
-export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }: Props) {
+function MicIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="5.5" y="1.5" width="5" height="8" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3.2 8.2a4.8 4.8 0 0 0 9.6 0M8 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+function StopIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
+      <rect x="2" y="2" width="9" height="9" rx="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus, hasRevenue }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const [positions, setPositions] = useState<NodePos[]>(() => layoutNodes(schema));
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -49,6 +72,58 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
   const [chatBusy, setChatBusy] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
+  const [attachment, setAttachment] = useState<{ base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; previewUrl: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recording, setRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Même mécanisme que l'assistant personnel (QuestChatClient.tsx) — les
+  // deux chats doivent se comporter pareil, sinon ça surprend selon celui
+  // qu'on utilise. Un appui démarre l'écoute, un second appui sur le même
+  // bouton l'arrête explicitement (pas seulement le silence détecté par le
+  // navigateur). Le texte reconnu atterrit dans le champ, prêt à envoyer.
+  function toggleVoice() {
+    if (recording) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setChatError("La dictée vocale n'est pas disponible sur ce navigateur.");
+      return;
+    }
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.onresult = (e: any) => {
+      let transcript = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      setChatInput((prev) => (prev ? prev + " " + transcript : transcript));
+    };
+    recognition.onend = () => setRecording(false);
+    recognition.onerror = () => setRecording(false);
+    recognitionRef.current = recognition;
+    setRecording(true);
+    recognition.start();
+  }
+
+  function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const accepted = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!accepted.includes(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setAttachment({ base64: dataUrl.split(",")[1], mediaType: file.type as any, previewUrl: dataUrl });
+    };
+    reader.readAsDataURL(file);
+  }
   const [pendingProposal, setPendingProposal] = useState<{ label: string; comment: string; type: "todo" | "risk" | "opportunity" } | null>(null);
   const [applyingProposal, setApplyingProposal] = useState(false);
   // Verrou de l'essai gratuit (avant compte) : les questions de clarification
@@ -66,16 +141,24 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
   // "use client" une première fois côté serveur pour le HTML initial, donc
   // toute lecture directe de window.innerWidth/innerHeight dans le JSX
   // (au lieu d'un useEffect) provoque un crash SSR ("window is not defined").
-  // On stocke la taille de la fenêtre en state, initialisée à 0 côté serveur
-  // et mise à jour après le montage côté client.
+  // On mesure la taille RÉELLE du conteneur de la carte (pas
+  // window.innerWidth/innerHeight, qui varie sur mobile à chaque
+  // apparition/disparition de la barre d'adresse au scroll, sans que ça
+  // corresponde à l'espace réellement occupé par la carte — c'était la
+  // cause du bug où les lignes de connexion sautaient ou se
+  // désalignaient des nœuds sur téléphone).
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
     function updateViewport() {
-      setViewport({ w: window.innerWidth, h: window.innerHeight });
+      const rect = el!.getBoundingClientRect();
+      setViewport({ w: rect.width, h: rect.height });
     }
     updateViewport();
-    window.addEventListener("resize", updateViewport);
-    return () => window.removeEventListener("resize", updateViewport);
+    const observer = new ResizeObserver(updateViewport);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   const dragState = useRef<{ type: "pan" | "node"; id?: string; lastX: number; lastY: number } | null>(null);
@@ -85,7 +168,11 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
     setPositions(layoutNodes(schema));
   }, [schema.nodes.length]);
 
-  // Construction progressive à l'ouverture, comme validé.
+  // Construction progressive à l'ouverture (les nœuds apparaissent un par
+  // un), puis une VRAIE question de l'IA — avant, ce panneau ne faisait
+  // que rejouer les commentaires déjà écrits dans le schéma en effet
+  // machine à écrire ("écriture inutile" à raison : ce n'était jamais une
+  // vraie question, juste du texte statique déjà visible ailleurs).
   useEffect(() => {
     let cancelled = false;
     async function run() {
@@ -93,9 +180,49 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
       await typeText(`J'analyse ${schema.projectTitle}. On commence par le cœur du projet.`, cancelled);
       for (const n of schema.nodes) {
         if (cancelled) return;
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 350));
         setShownIds((prev) => new Set(prev).add(n.id));
-        await typeText(n.comment, cancelled);
+      }
+      if (cancelled || freeMode || !ideaId) return;
+
+      // Une vraie question posée par palier de progression, pas à chaque
+      // visite — sinon ça redéclencherait un appel IA payant à chaque
+      // ouverture du dashboard, exactement le genre de boucle qu'on a déjà
+      // corrigée ailleurs (voir lib/quests.ts). Le drapeau vit dans le
+      // navigateur, pas en base : pas besoin de migration pour un simple
+      // confort d'accueil, et ça n'a aucune conséquence si ça se
+      // redéclenche une fois sur un autre appareil.
+      //
+      // Le palier fait partie de la clé : avant, le drapeau était posé
+      // "pour toujours" dès la toute première question, donc même une fois
+      // du revenu réel déclaré, la question ne redemandait jamais rien de
+      // stratégique (automatiser, déléguer) — elle ne se posait qu'une
+      // fois, au tout début, point final.
+      const milestone = hasRevenue ? "has_revenue" : "start";
+      const flagKey = `spark_opening_question_${ideaId}_${milestone}`;
+      if (localStorage.getItem(flagKey)) return;
+      localStorage.setItem(flagKey, "1");
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ideaId,
+            message: hasRevenue
+              ? "J'ai maintenant du revenu réel sur ce projet. Pose-moi maintenant UNE seule question ciblée sur le prochain palier stratégique (automatiser, déléguer, augmenter ce qui marche déjà)."
+              : "Regarde mon schéma et pose-moi maintenant UNE seule question ciblée sur ce qui est encore le plus vague ou le plus important à préciser dans mon projet.",
+            history: [],
+          }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && data.reply) {
+          setAiText(data.reply);
+          setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+        }
+      } catch {
+        // Silencieux : une question d'accueil manquée n'est pas bloquante,
+        // l'utilisateur peut toujours lancer la conversation lui-même.
       }
     }
     run();
@@ -103,7 +230,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema.projectTitle]);
+  }, [schema.projectTitle, hasRevenue]);
 
   async function typeText(str: string, cancelled: boolean) {
     setAiText("");
@@ -152,7 +279,7 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
   // --- Chat ---
   async function sendMessage() {
     const msg = chatInput.trim();
-    if (!msg || chatBusy) return;
+    if ((!msg && !attachment) || chatBusy) return;
     if (freeChatLocked) {
       setChatError("Ton schéma est prêt. Crée ton compte pour continuer la conversation et le suivi de ton projet.");
       return;
@@ -160,7 +287,9 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
     setChatBusy(true);
     setChatError(null);
     setChatInput("");
-    setChatMessages((m) => [...m, { role: "user", text: msg }]);
+    const sentAttachment = attachment;
+    setAttachment(null);
+    setChatMessages((m) => [...m, { role: "user", text: msg || "(photo jointe)" }]);
 
     try {
       if (freeMode) {
@@ -174,7 +303,10 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
           setChatError(data.error ?? "Erreur.");
         } else {
           setFreeMessageCount((n) => n + 1);
-          if (data.reply) setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+          if (data.reply) {
+            setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+            setAiText(data.reply);
+          }
           if (data.newNode && onSchemaChange) {
             onSchemaChange({ ...schema, nodes: [...schema.nodes, data.newNode] });
           }
@@ -183,16 +315,24 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ideaId, message: msg }),
+          body: JSON.stringify({
+            ideaId,
+            message: msg || "Regarde cette image et aide-moi.",
+            // Les 10 derniers messages déjà affichés — sans ça, l'IA ne se
+            // souvient de rien d'un message à l'autre, même si elle vient
+            // de proposer plusieurs options juste avant.
+            history: chatMessages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
+            image: sentAttachment ? { base64: sentAttachment.base64, mediaType: sentAttachment.mediaType } : undefined,
+          }),
         });
         const data = await res.json();
         if (!res.ok) {
           setChatError(data.error ?? "Erreur.");
         } else {
-          if (data.reply) setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
-          // On ne modifie plus le schéma tout seul : on garde la
-          // proposition de côté, l'utilisateur valide via les boutons
-          // affichés dans le chat (voir pendingProposal plus bas).
+          if (data.reply) {
+            setChatMessages((m) => [...m, { role: "assistant", text: data.reply }]);
+            setAiText(data.reply);
+          }
           if (data.proposedNode) setPendingProposal(data.proposedNode);
         }
       }
@@ -409,7 +549,12 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
         </div>
       </div>
 
-      {/* Panneau IA en direct */}
+      {/* Panneau IA en direct — devient "Question du projet" quand l'IA
+          vient de poser une question ciblée (voir la règle dédiée dans
+          answerChatMessage) : plutôt qu'un simple commentaire passif à
+          lire, un vrai bouton "Répondre" amène directement au champ de
+          saisie, pour que ça ressemble à une vraie interview structurée
+          du projet plutôt qu'un chat flou où on ne sait pas quoi taper. */}
       <div
         className="panel"
         style={{ position: "fixed", top: 16, right: 16, zIndex: 15, width: 280, padding: 14 }}
@@ -424,11 +569,23 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
               boxShadow: "0 0 8px var(--line)",
             }}
           />
-          Analyse en direct
+          {aiText.trim().endsWith("?") ? "Question du projet" : "Analyse en direct"}
+        </div>
+        <div style={{ fontSize: 11, color: "var(--line)", marginBottom: 6, fontWeight: 600 }}>
+          Un projet complet = des quêtes qui rapportent vraiment.
         </div>
         <div style={{ fontSize: 13.5, lineHeight: 1.7, color: "#e2e8f0", maxHeight: 140, overflowY: "auto" }}>
-          {aiText}
+          {aiText || "En cours d'analyse de ton projet..."}
         </div>
+        {aiText.trim().endsWith("?") && (
+          <button
+            onClick={() => chatInputRef.current?.focus()}
+            className="btn-primary"
+            style={{ width: "100%", marginTop: 10, fontSize: 12.5, padding: "6px 10px" }}
+          >
+            Répondre →
+          </button>
+        )}
       </div>
 
       {/* Historique des messages, juste au-dessus de la barre de saisie */}
@@ -495,6 +652,30 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
         </div>
       )}
 
+      {/* Aperçu de la photo jointe, juste au-dessus de la barre de chat */}
+      {attachment && (
+        <div
+          className="panel"
+          style={{
+            position: "fixed",
+            bottom: 76,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 15,
+            padding: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <img src={attachment.previewUrl} alt="Aperçu" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
+          <span style={{ fontSize: 11.5, color: "var(--muted)" }}>Photo prête à envoyer</span>
+          <button onClick={() => setAttachment(null)} style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 11.5 }}>
+            Retirer
+          </button>
+        </div>
+      )}
+
       {/* Barre de chat */}
       <div
         className="panel"
@@ -511,12 +692,26 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
           gap: 8,
         }}
       >
+        {!freeMode && (
+          <>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-secondary"
+              aria-label="Joindre une photo"
+              style={{ width: 30, height: 30, padding: 0, borderRadius: 8, flexShrink: 0 }}
+            >
+              +
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={onFileChosen} style={{ display: "none" }} />
+          </>
+        )}
         <input
+          ref={chatInputRef}
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           disabled={freeChatLocked}
-          placeholder={freeChatLocked ? "Crée ton compte pour continuer →" : "Parle à l'IA de ton projet..."}
+          placeholder={recording ? "Je t'écoute..." : freeChatLocked ? "Crée ton compte pour continuer →" : "Parle à l'IA de ton projet..."}
           style={{
             flex: 1,
             background: "transparent",
@@ -527,6 +722,27 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
             paddingLeft: 10,
           }}
         />
+        {!freeMode && (
+          <button
+            onClick={toggleVoice}
+            aria-label={recording ? "Arrêter l'enregistrement" : "Dicter un message"}
+            style={{
+              width: 30,
+              height: 30,
+              flexShrink: 0,
+              borderRadius: "50%",
+              border: recording ? "1px solid var(--danger)" : "1px solid var(--border)",
+              background: recording ? "rgba(244,63,94,0.12)" : "transparent",
+              color: recording ? "var(--danger)" : "var(--muted)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {recording ? <StopIcon /> : <MicIcon />}
+          </button>
+        )}
         <button onClick={sendMessage} disabled={chatBusy || freeChatLocked} className="btn-secondary" style={{ borderRadius: 11 }}>
           {chatBusy ? "..." : "→"}
         </button>
@@ -596,6 +812,13 @@ export function MindMap({ schema, onSchemaChange, ideaId, freeMode, onVoirPlus }
               <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 18, lineHeight: 1.3 }}>
                 {n.label}
               </h2>
+              {n.imageUrl && (
+                <img
+                  src={n.imageUrl}
+                  alt=""
+                  style={{ width: "100%", maxHeight: 260, objectFit: "cover", borderRadius: 12, marginBottom: 18 }}
+                />
+              )}
               <p style={{ fontSize: 15, lineHeight: 1.8, color: "#e2e8f0", whiteSpace: "pre-line" }}>
                 {n.detail || n.comment}
               </p>

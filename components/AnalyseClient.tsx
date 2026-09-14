@@ -6,6 +6,22 @@ import { buildAnalyticsSeries, type Period } from "@/lib/analytics";
 
 type RawQuest = { completedAt: string; track: "marketing" | "technique" };
 type RawCheckIn = { createdAt: string; clients: number; revenue: number; audience: number };
+type StrategicAnalysis = {
+  score: number;
+  scoreExplanation: string;
+  marche: string;
+  cible: string;
+  problemeResolu: string;
+  concurrence: string;
+  differenciation: string;
+  propositionDeValeur: string;
+  monetisation: string;
+  acquisition: string;
+  risques: string;
+  opportunites: string;
+  aValider: string[];
+  prochainesPriorites: string[];
+};
 
 const PERIOD_LABELS: Record<Period, string> = {
   day: "Jour",
@@ -14,18 +30,36 @@ const PERIOD_LABELS: Record<Period, string> = {
   year: "An",
 };
 
+const SECTIONS: { key: keyof StrategicAnalysis; label: string }[] = [
+  { key: "marche", label: "Marché & demande" },
+  { key: "cible", label: "Cible" },
+  { key: "problemeResolu", label: "Problème résolu" },
+  { key: "concurrence", label: "Concurrence" },
+  { key: "differenciation", label: "Différenciation" },
+  { key: "propositionDeValeur", label: "Proposition de valeur" },
+  { key: "monetisation", label: "Monétisation (pistes à tester)" },
+  { key: "acquisition", label: "Acquisition" },
+  { key: "risques", label: "Risques" },
+  { key: "opportunites", label: "Opportunités" },
+];
+
 export function AnalyseClient({
   ideaId,
   analysis,
+  progressSummary,
   quests,
   checkIns,
 }: {
   ideaId: string;
-  analysis: string;
+  analysis: StrategicAnalysis;
+  progressSummary: string;
   quests: RawQuest[];
   checkIns: RawCheckIn[];
 }) {
+  const router = useRouter();
   const [period, setPeriod] = useState<Period>("week");
+  const [current, setCurrent] = useState(analysis);
+  const [regenerating, setRegenerating] = useState(false);
 
   const series = useMemo(() => {
     const q = quests.map((x) => ({ completedAt: new Date(x.completedAt), track: x.track }));
@@ -33,23 +67,102 @@ export function AnalyseClient({
     return buildAnalyticsSeries(period, q, c);
   }, [period, quests, checkIns]);
 
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try {
+      const res = await fetch("/api/ideas/regenerate-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.analysis) {
+        setCurrent(data.analysis);
+        router.refresh();
+      }
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   return (
     <div style={{ position: "relative", zIndex: 2, padding: "0 20px 80px", maxWidth: 720, margin: "0 auto" }}>
-      {/* Paragraphe d'analyse IA */}
+      {/* Analyse stratégique — le vrai document, pas juste une fiche de
+          chiffres. Mise en cache côté serveur (voir la page), donc pas
+          régénérée à chaque visite : le bouton ci-dessous force une
+          nouvelle lecture si le projet a évolué. */}
       <div
         style={{
           background: "var(--panel)",
           border: "1px solid var(--border)",
           borderRadius: 12,
-          padding: "18px 20px",
-          marginBottom: 24,
-          fontSize: 14,
-          lineHeight: 1.6,
-          color: "var(--text)",
+          padding: "24px 22px",
+          marginBottom: 28,
         }}
       >
-        <div style={{ fontSize: 12, color: "var(--line)", marginBottom: 8, fontWeight: 600 }}>ANALYSE</div>
-        {analysis}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "var(--line)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Analyse stratégique
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, marginTop: 6 }}>{current.score}/10</div>
+          </div>
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="btn-secondary"
+            style={{ fontSize: 12, padding: "6px 12px", flexShrink: 0 }}
+          >
+            {regenerating ? "..." : "Régénérer"}
+          </button>
+        </div>
+
+        <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--text)", marginBottom: 20 }}>{current.scoreExplanation}</p>
+
+        {SECTIONS.map((s) => (
+          <div key={s.key} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginBottom: 4 }}>{s.label}</div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "var(--text)" }}>{current[s.key] as string}</p>
+          </div>
+        ))}
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>À valider en priorité</div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: "var(--text)" }}>
+            {current.aValider.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>Prochaines priorités</div>
+          <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.7, color: "var(--text)" }}>
+            {current.prochainesPriorites.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      {/* Progression — ce qui avance, ce qui traîne. Contenu court, se
+          régénère à chaque visite car il dépend des chiffres du moment. */}
+      <div
+        style={{
+          background: "var(--surface-subtle)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          padding: "16px 20px",
+          marginBottom: 24,
+          fontSize: 13.5,
+          lineHeight: 1.6,
+          color: "var(--muted)",
+        }}
+      >
+        <div style={{ fontSize: 11, color: "var(--line)", marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Progression
+        </div>
+        {progressSummary}
       </div>
 
       {/* Sélecteur de période — partagé par les 4 graphiques */}

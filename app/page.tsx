@@ -14,6 +14,7 @@ export default function HomePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [idea, setIdea] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +37,18 @@ export default function HomePage() {
       })
       .catch(() => {
         // Purement décoratif : un échec ici ne doit jamais gêner la page d'accueil.
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/hero-image")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.url === "string") setHeroImageUrl(data.url);
+      })
+      .catch(() => {
+        // Purement décoratif : sans clé Pexels ou en cas d'échec, la page
+        // reste identique, juste sans l'image — jamais bloquant.
       });
   }, []);
 
@@ -152,6 +165,25 @@ export default function HomePage() {
       )}
       <AnimatedGrid intensity="intense" />
 
+      {/* Lueur douce derrière le titre — donne de la profondeur et de la
+          couleur sans réintroduire d'animation qui capte l'attention en
+          continu (retiré plus tôt dans le projet). Statique, discrète. */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: "-10%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 900,
+          height: 500,
+          background: "radial-gradient(closest-side, rgba(34,211,238,0.16), rgba(168,85,247,0.08), transparent)",
+          filter: "blur(40px)",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+
       <div
         style={{
           position: "fixed",
@@ -228,6 +260,22 @@ export default function HomePage() {
           Décris ton idée de projet, réponds à quelques questions, obtiens un
           plan précis pour la lancer — gratuit, sans inscription.
         </p>
+
+        {heroImageUrl && (
+          <img
+            src={heroImageUrl}
+            alt=""
+            style={{
+              marginTop: 26,
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: 220,
+              objectFit: "cover",
+              borderRadius: 16,
+              border: "1px solid var(--border)",
+            }}
+          />
+        )}
 
         {monthlyCount !== null && (
           <div style={{ marginTop: 10, fontSize: 12, color: "var(--line)" }}>
@@ -435,6 +483,189 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Séquence "comment ça marche" — montre la transformation du projet
+          plutôt que de la décrire en texte seul. Illustrations stylisées
+          (pas de vraies captures d'écran : je n'ai jamais vu le produit
+          tourner dans un navigateur, donc pas de fausse capture qui
+          prétendrait être réelle — à remplacer par de vrais screenshots
+          du produit dès que possible). */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "10vh 24px 6vh",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
+          Comment ça marche
+        </div>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 40 }}>
+          Ton idée, transformée étape par étape
+        </h2>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: 16,
+            maxWidth: 1100,
+            margin: "0 auto",
+          }}
+        >
+          {[
+            {
+              title: "Idée",
+              desc: "Tu décris ton projet en une phrase.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <path d="M13 4a7 7 0 0 0-4 12.7V19a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 13 4Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d="M10.5 23h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              ),
+            },
+            {
+              title: "Analyse",
+              desc: "L'IA étudie marché, cible, concurrence, monétisation.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M16 16l6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+              ),
+            },
+            {
+              title: "Schéma",
+              desc: "Un plan visuel structuré : forces, risques, opportunités.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <circle cx="13" cy="6" r="3" stroke="currentColor" strokeWidth="1.4" />
+                  <circle cx="6" cy="20" r="3" stroke="currentColor" strokeWidth="1.4" />
+                  <circle cx="20" cy="20" r="3" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M11.5 8.5 7.5 17.5M14.5 8.5l4 9" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
+              ),
+            },
+            {
+              title: "Quêtes",
+              desc: "Des actions concrètes chaque jour, techniques et marketing.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <rect x="4" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M8 13l3 3 6-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ),
+            },
+            {
+              title: "Assistant",
+              desc: "Une IA qui connaît ton projet en permanence, prête à t'aider.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <path d="M5 6h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H12l-5 4v-4H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                </svg>
+              ),
+            },
+            {
+              title: "Progression",
+              desc: "Tu suis tes clients, ton revenu, ton avancée réelle.",
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                  <path d="M3 20h20" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  <path d="M5 17l5-6 4 4 7-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ),
+            },
+          ].map((step, i) => (
+            <div key={step.title} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div
+                className="panel"
+                style={{
+                  width: 168,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 12,
+                    color: "var(--line)",
+                    background: "rgba(34,211,238,0.08)",
+                  }}
+                >
+                  {step.icon}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{step.title}</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted)", lineHeight: 1.5 }}>{step.desc}</div>
+              </div>
+              {i < 5 && (
+                <span style={{ color: "var(--muted)", fontSize: 18, flexShrink: 0 }} className="landing-arrow">
+                  →
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Vidéo de démonstration du produit — désactivée pour l'instant
+          (commentée), le temps que Raphaël fournisse le fichier réel.
+          Dès qu'il le donne : déposer le fichier dans /public sous le nom
+          product-demo.mp4, puis décommenter ce bloc. Volontairement
+          désactivé plutôt qu'affiché avec un src cassé, qui ferait plus
+          mauvaise impression qu'une section absente. */}
+      {/*
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "6vh 24px 10vh",
+        }}
+      >
+        <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+          En vidéo
+        </div>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 28, maxWidth: 500 }}>
+          Spark Idea en action, en moins de 2 minutes
+        </h2>
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            borderRadius: 18,
+            overflow: "hidden",
+            border: "1px solid var(--border)",
+            boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+            background: "var(--panel)",
+          }}
+        >
+          <video
+            controls
+            preload="metadata"
+            poster="/testimonials-dm.jpg"
+            style={{ width: "100%", display: "block", aspectRatio: "16 / 9", objectFit: "cover" }}
+          >
+            <source src="/product-demo.mp4" type="video/mp4" />
+          </video>
+        </div>
+      </div>
+      */}
+
+      {/* Preuve sociale — vraies conversations clients, partagées avec
+          autorisation. Avant, la landing n'avait aucun témoignage : le
+          seul se trouvait après l'inscription (/welcome), jamais avant. */}
       <div
         style={{
           position: "relative",
@@ -443,64 +674,18 @@ export default function HomePage() {
           flexDirection: "column",
           alignItems: "center",
           textAlign: "center",
-          padding: "10vh 24px 14vh",
+          padding: "10vh 24px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
         }}
       >
-        <div style={{ fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
-          Affiliation
+        <div style={{ fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 16 }}>
+          Ils l&apos;ont testé
         </div>
-        <h2 style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: 600, maxWidth: 560, lineHeight: 1.3 }}>
-          Recommande Spark Idea. Sois payé pour ça.
-        </h2>
-        <p style={{ marginTop: 10, fontSize: 14, color: "var(--muted)", maxWidth: 460, lineHeight: 1.6 }}>
-          Rejoins le programme gratuitement et touche une commission sur chaque personne que tu inscris — sans limite, sans avance de frais.
-        </p>
-
-        <div style={{ display: "flex", gap: 28, marginTop: 30, flexWrap: "wrap", justifyContent: "center", maxWidth: 640 }}>
-          {[
-            { n: 1, t: "Inscription", d: "Crée ton compte affilié en moins de deux minutes, aucune carte requise." },
-            { n: 2, t: "Partage", d: "Récupère ton lien unique et diffuse-le où tu veux." },
-            { n: 3, t: "Rémunération", d: "Chaque inscription via ton lien génère une commission versée automatiquement." },
-          ].map((step) => (
-            <div key={step.n} style={{ width: 170, textAlign: "center" }}>
-              <div
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: "50%",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  margin: "0 auto 10px",
-                }}
-              >
-                {step.n}
-              </div>
-              <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>{step.t}</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{step.d}</div>
-            </div>
-          ))}
-        </div>
-
-        <a
-          href="https://t.me/Raphael42r"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary"
-          style={{ marginTop: 30, textDecoration: "none", display: "inline-block" }}
-        >
-          Contactez-nous →
-        </a>
-
-        <div style={{ marginTop: 30, fontSize: 12.5, color: "var(--muted)" }}>
-          Une question sur le programme ? Écris-moi sur Telegram{" "}
-          <a href="https://t.me/Raphael42r" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text)" }}>
-            @Raphael42r
-          </a>
-        </div>
+        <img
+          src="/testimonials-dm.jpg"
+          alt="Conversations réelles de clients Spark Idea, partagées avec leur autorisation"
+          style={{ width: "100%", maxWidth: 900, borderRadius: 16, border: "1px solid var(--border)" }}
+        />
       </div>
 
       <Link

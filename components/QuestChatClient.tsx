@@ -220,7 +220,36 @@ export function QuestChatClient({
     return () => {
       cancelled = true;
     };
-  }, [ideaId]);
+    // Avant : dépendance sur [ideaId] au lieu de [activeConversationId] —
+    // donc changer de conversation dans la liste ne rechargeait jamais les
+    // messages, seul le premier montage du composant le faisait.
+  }, [activeConversationId]);
+
+  // Reçoit une demande venant du bouton "Demander à l'IA" d'une quête
+  // (AllQuestsClient) — ouvre l'assistant et envoie le prompt tout de
+  // suite, sans navigation ni copier-coller manuel. Avant, ce bouton
+  // renvoyait vers une page séparée (/dashboard/ai) qui ignorait
+  // complètement la quête concernée — un assistant vide, sans rapport
+  // avec ce qui venait d'être cliqué.
+  //
+  // sendRef : la fonction send() dépend de plusieurs états qui changent
+  // (conversation active, saisie en cours...) — sans cette référence
+  // toujours à jour, l'écouteur figerait send() sur son tout premier
+  // rendu et enverrait le prompt vers une conversation obsolète.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  useEffect(() => {
+    function onAskAI(e: Event) {
+      const prompt = (e as CustomEvent<string>).detail;
+      if (!prompt) return;
+      setMinimized(false);
+      sendRef.current(prompt);
+    }
+    window.addEventListener("spark:ask-ai", onAskAI);
+    return () => window.removeEventListener("spark:ask-ai", onAskAI);
+  }, []);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -307,12 +336,12 @@ export function QuestChatClient({
     recognition.start();
   }
 
-  async function send() {
-    const msg = input.trim();
+  async function send(overrideText?: string) {
+    const msg = (overrideText ?? input).trim();
     if ((!msg && !attachment) || busy) return;
     setBusy(true);
     setError(null);
-    setInput("");
+    if (overrideText === undefined) setInput("");
     const sentAttachment = attachment;
     setAttachment(null);
     setMessages((m) => [...m, { role: "user", text: msg || "(photo jointe)", imagePreview: sentAttachment?.previewUrl }]);
@@ -709,7 +738,7 @@ export function QuestChatClient({
           </button>
 
           <button
-            onClick={send}
+            onClick={() => send()}
             disabled={!canSend}
             aria-label="Envoyer"
             className="btn-primary"

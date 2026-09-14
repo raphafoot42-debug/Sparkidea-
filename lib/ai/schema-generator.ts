@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import { searchIllustrationImage } from "@/lib/images";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }); 
 
@@ -56,6 +57,12 @@ export const NodeSchema = z.object({
   // étapes concrètes pour ce point précis. Plus long que "comment", qui
   // reste la version courte affichée directement sur le schéma.
   detail: z.string().max(1200),
+  // Image d'illustration récupérée après coup via Pexels (voir
+  // lib/images.ts) — jamais générée par l'IA elle-même, ajoutée en plus
+  // une fois le schéma produit. Optionnelle : absente si pas de clé
+  // Pexels configurée ou si la recherche échoue, pour ne jamais bloquer
+  // la génération du schéma à cause d'une image.
+  imageUrl: z.string().optional(),
 });
 
 const SchemaResultSchema = z.object({
@@ -360,7 +367,20 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
     throw new Error("La réponse de l'IA ne respecte pas le format attendu.");
   }
 
-  return result.data;
+  // Une image d'illustration par nœud, cherchée sur le libellé du point —
+  // rendu ajouté une fois le schéma validé, jamais par l'IA elle-même
+  // (voir lib/images.ts). En parallèle pour ne pas multiplier le temps
+  // d'attente par le nombre de nœuds. Une recherche en échec (pas de clé,
+  // panne réseau) laisse simplement imageUrl absent sur ce nœud — jamais
+  // bloquant pour le reste du schéma.
+  const nodesWithImages = await Promise.all(
+    result.data.nodes.map(async (node) => {
+      const imageUrl = await searchIllustrationImage(node.label);
+      return imageUrl ? { ...node, imageUrl } : node;
+    })
+  );
+
+  return { ...result.data, nodes: nodesWithImages };
 }
 
 // ---------------------------------------------------------------------------
@@ -370,24 +390,51 @@ export async function generateSchema(ideaText: string): Promise<SchemaResult> {
 // ---------------------------------------------------------------------------
 export async function answerChatMessage(
   currentSchema: SchemaResult,
-  userMessage: string
+  userMessage: string,
+  // Historique récent de cette conversation (hors message actuel) — avant,
+  // chaque appel n'envoyait QUE le dernier message : si l'IA proposait
+  // "option A ou option B" et que l'utilisateur répondait juste "option A",
+  // elle ne savait déjà plus de quoi il parlait. Plafonné à 10 messages
+  // côté appelant pour ne pas laisser le coût grimper sans limite.
+  history: { role: "user" | "assistant"; text: string }[] = [],
+  image?: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" },
+  // Derniers chiffres réels déclarés (clients/revenu/audience) — sans ça,
+  // ce chat ne peut jamais savoir qu'un client a déjà du revenu réel, et
+  // continue à poser des questions de démarrage même une fois que le
+  // projet a dépassé ce stade.
+  latestCheckIn: { clients: number; revenue: number; audience: number } | null = null
 ): Promise<{ reply: string; newNode?: z.infer<typeof NodeSchema> }> {
+  const checkInLine = latestCheckIn
+    ? `\nCHIFFRES RÉELS DÉCLARÉS : ${latestCheckIn.clients} clients, ${latestCheckIn.revenue}€ de revenu, ${latestCheckIn.audience} d'audience. S'il y a du revenu réel (> 0€), ne pose plus de questions de démarrage (cible, différenciation de base) — pose plutôt des questions de palier suivant : automatisation, délégation, structure pour encaisser plus sans plus travailler, ou nouveau canal de revenu. Adapte-toi précisément à ce stade, pas à un stade générique.\n`
+    : "";
+
   const system = `Tu es l'assistant IA de Spark Idea. Tu discutes avec l'utilisateur UNIQUEMENT à propos du projet "${currentSchema.projectTitle}", dont voici l'état actuel du schéma :
 
 ${JSON.stringify(currentSchema.nodes, null, 2)}
-
+${checkInLine}
 RÈGLES :
+- Tu as accès à l'historique récent de cette conversation ci-dessous — appuie-toi dessus. Si tu as proposé plusieurs options (A/B, ou une liste) dans un message précédent, et que l'utilisateur répond juste "la première", "option A", ou une réponse courte qui ne fait sens qu'à la lumière de ce que TU viens de proposer, comprends la référence au lieu de redemander de préciser.
 - Si l'utilisateur semble parler d'un AUTRE projet (une idée clairement différente, pas liée au projet actuel), signale-le-lui honnêtement et demande confirmation avant de continuer — mais seulement si tu as un vrai doute. Ne demande pas systématiquement, ça deviendrait lourd.
 - Le schéma ci-dessus est un premier jet généré à partir d'une simple description — il reste volontairement général. Ton rôle dans cette conversation est de le compléter : repère ce qui est encore vague ou manquant (cible précise, différenciation réelle, modèle de revenu concret...) et pose UNE question ciblée à la fois pour le préciser, plutôt que d'attendre que l'utilisateur devine quoi te dire.
 - Si la demande de l'utilisateur est vague (ex: "propose-moi des idées", "aide-moi"), pose 1 à 2 questions ciblées avant de répondre, plutôt qu'une réponse générique.
+- Si l'utilisateur a joint une image, regarde-la et base ta réponse dessus.
 - Si l'utilisateur demande d'ajouter un point au schéma, réponds en JSON avec un champ "newNode" (même format que les nœuds existants) en plus de ta réponse texte dans "reply".
 - Réponds en JSON strict : { "reply": "...", "newNode": {...} } — "newNode" est optionnel, ne l'inclus que si un point doit vraiment être ajouté au schéma.`;
+
+  const historyMessages = history.map((h) => ({ role: h.role, content: h.text }));
+
+  const userContent: Anthropic.MessageParam["content"] = image
+    ? [
+        { type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } },
+        { type: "text", text: userMessage },
+      ]
+    : userMessage;
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 600,
     system,
-    messages: [{ role: "user", content: userMessage }],
+    messages: [...historyMessages, { role: "user", content: userContent }],
   });
 
   const textBlock = message.content.find((b) => b.type === "text");
