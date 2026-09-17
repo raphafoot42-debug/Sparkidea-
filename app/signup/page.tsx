@@ -11,12 +11,12 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [backUrl, setBackUrl] = useState("/");
+  const [hasPendingSchema, setHasPendingSchema] = useState(false);
 
   useEffect(() => {
     try {
-      if (sessionStorage.getItem("spark_pending_schema")) {
-        setBackUrl("/result");
+      if (typeof window !== "undefined" && Boolean(window.sessionStorage.getItem("spark_pending_schema"))) {
+        setHasPendingSchema(true);
       }
     } catch {
       // Ignorer
@@ -107,7 +107,7 @@ export default function SignupPage() {
         </button>
 
         <div style={{ textAlign: "center", marginTop: 12 }}>
-          <Link href={backUrl} style={{ fontSize: 12, color: "var(--muted)" }}>
+          <Link href={hasPendingSchema ? "/result" : "/"} style={{ fontSize: 12, color: "var(--muted)" }}>
             ← Revenir en arrière
           </Link>
         </div>

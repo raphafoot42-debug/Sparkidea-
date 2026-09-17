@@ -31,7 +31,14 @@ export async function verifyPassword(
 // bouton "déconnecter tous les appareils").
 // -----------------------------------------------------------------------
 function getSessionSecret(): string {
-  return process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET || "spark_idea_fallback_session_secret_2025";
+  const secret = process.env.SESSION_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET ou NEXTAUTH_SECRET manquant dans l'environnement de production");
+    }
+    return "spark_idea_fallback_session_secret_dev";
+  }
+  return secret;
 }
 
 function sign(value: string): string {
