@@ -120,6 +120,15 @@ export async function POST(req: NextRequest) {
       }
       break;
     }
+
+    case "charge.refunded": {
+      // Remboursement d'un paiement Stripe.
+      // Affitor écoute directement le webhook Stripe connecté (charge.refunded)
+      // pour révoquer/annuler la commission affiliée correspondante.
+      const charge = event.data.object as Stripe.Charge;
+      console.log(`[stripe/webhook] Charge remboursée (${charge.id}), montant: ${charge.amount_refunded}`);
+      break;
+    }
   }
 
   return NextResponse.json({ received: true });

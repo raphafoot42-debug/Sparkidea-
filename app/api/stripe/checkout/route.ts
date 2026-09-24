@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const clickId = req.cookies.get("affitor_click_id")?.value || "";
+    const programId = process.env.AFFITOR_PROGRAM_ID || "MON_PROGRAM_ID_AFFITOR";
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: stripeCustomerId,
@@ -100,6 +103,16 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         plan,
         ...(token ? { pendingCheckoutToken: token } : {}),
+        affitor_click_id: clickId,
+        affitor_customer_key: user.id,
+        program_id: programId,
+      },
+      subscription_data: {
+        metadata: {
+          affitor_click_id: clickId,
+          affitor_customer_key: user.id,
+          program_id: programId,
+        },
       },
     });
 
