@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getCurrentUser } from "@/lib/auth";
+import { AffitorTracker } from "@/components/AffitorTracker";
 
 export const metadata: Metadata = {
   title: "Spark Idea — Ton idée, ta destinée",
@@ -27,7 +28,10 @@ export default async function RootLayout({
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AffitorTracker />
+        {children}
+      </body>
     </html>
   );
 }

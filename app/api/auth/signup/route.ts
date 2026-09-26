@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, hashPassword } from "@/lib/auth";
+import { trackAffitorSignup } from "@/lib/affitor";
 
 const BodySchema = z.object({
   email: z.string().email("Email invalide."),
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
   });
 
   await createSession(user.id);
+
+  // Tracking de l'inscription pour Affitor (relier l'utilisateur à l'affilié)
+  const clickId = req.cookies.get("affitor_click_id")?.value;
+  await trackAffitorSignup({
+    customerKey: user.id,
+    email: user.email,
+    clickId,
+  });
 
   return NextResponse.json({ ok: true });
 }
