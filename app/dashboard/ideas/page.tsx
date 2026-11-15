@@ -8,7 +8,7 @@ import { MAX_IDEAS, toPlanKey } from "@/lib/plan-limits";
 import { computeGlobalProgress } from "@/lib/progress";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
-export default async function IdeasPage() {
+export default async function IdeasPage() { 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
