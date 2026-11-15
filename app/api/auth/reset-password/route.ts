@@ -6,7 +6,7 @@ import { consumePasswordResetToken, clearPasswordResetToken, hashPassword, reset
 const BodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8, "8 caractères minimum."),
-});
+}); 
 
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
