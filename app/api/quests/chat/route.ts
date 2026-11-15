@@ -7,7 +7,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
 import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial";
 
-// ideaId remplace questId — décidé avec Raphaël : le chat n'est plus limité
+// ideaId remplace questId — décidé avec Raphaël : le chat n'est plus limité 
 // à une quête sélectionnée, il connaît tout le projet et répond librement.
 // conversationId est optionnel : s'il est absent, une nouvelle conversation
 // est créée automatiquement (premier message d'un chat flambant neuf).
