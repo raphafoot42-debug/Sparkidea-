@@ -1,12 +1,18 @@
-// Essai gratuit après inscription, avant tout paiement : 24h, plafonné en
-// nombre de messages IA pour contrôler le coût en cas d'abus (spam/bot).
-// Démarre à l'inscription (subscriptionStatus = "TRIAL" + trialStartedAt),
-// se termine automatiquement après 24h OU après TRIAL_MESSAGE_LIMIT messages
-// — le premier des deux déclenche le mur de paiement.
-export const TRIAL_DURATION_MS = 24 * 60 * 60 * 1000;
-export const TRIAL_MESSAGE_LIMIT = 15;
+// Essai gratuit après inscription, avant tout paiement : 7 jours, avec toutes
+// les fonctionnalités débloquées (export PDF, suivi...), mais l'IA est
+// plafonnée en nombre de messages pour garder le coût par essai très bas
+// (cible : moins de 1 € par essai, voir lib/plan-limits.ts).
+// Démarre à l'inscription (subscriptionStatus = "TRIAL" + trialStartedAt).
+// Le vrai garde-fou de coût, c'est TRIAL_MESSAGE_LIMIT : une fois atteint,
+// le chat IA est bloqué même s'il reste des jours d'essai. La durée, elle,
+// ne coûte rien de plus toute seule.
+// Pour ajuster : change UNIQUEMENT ces deux constantes, tout le reste de
+// l'application (bannière, quota affiché, API) les lit d'ici.
+export const TRIAL_DURATION_DAYS = 7;
+export const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
+export const TRIAL_MESSAGE_LIMIT = 25;
 
-type TrialUser = { 
+type TrialUser = {
   subscriptionStatus: string;
   trialStartedAt: Date | null;
 };
