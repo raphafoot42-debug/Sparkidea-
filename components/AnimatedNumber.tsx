@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-// Même principe que AnimatedScore mais pour un entier (pas de décimale) —
+// Même principe que AnimatedScore mais pour un entier (pas de décimale) — 
 // utilisé pour le compteur social de l'accueil.
 export function AnimatedNumber({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
