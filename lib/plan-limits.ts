@@ -1,7 +1,7 @@
 // Source unique de vérité pour les 3 forfaits (19€ / 49€ / 97€).
 // Tout le reste du code (API + UI) doit lire ces constantes plutôt que
 // dupliquer des chiffres en dur — sinon les forfaits finissent par
-// diverger entre deux endroits (c'était déjà le cas avant ce fichier —
+// diverger entre deux endroits (c'était déjà le cas avant ce fichier — 
 // et encore le cas sur la page /pricing jusqu'à ce qu'on la fasse lire
 // cette constante directement).
 //
