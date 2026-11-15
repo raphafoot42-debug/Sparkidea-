@@ -7,5 +7,5 @@ export default function SchemaRedirectPage({
 }: {
   searchParams: { idea?: string };
 }) {
-  redirect(searchParams.idea ? `/dashboard?idea=${searchParams.idea}` : "/dashboard");
+  redirect(searchParams.idea ? `/dashboard?idea=${searchParams.idea}` : "/dashboard"); 
 }
