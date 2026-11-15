@@ -8,7 +8,7 @@ export function AffitorTracker() {
       const params = new URLSearchParams(window.location.search);
       const clickId =
         params.get("affitor_click_id") ||
-        params.get("click_id") ||
+        params.get("click_id") || 
         params.get("clickid") ||
         params.get("ref") ||
         params.get("via") ||
