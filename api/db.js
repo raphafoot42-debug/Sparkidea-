@@ -3,7 +3,7 @@
 //
 // Variables d'environnement à configurer sur Vercel (Settings > Environment Variables) :
 //   SUPABASE_URL          -> ex: https://xxxxxxxxxxxxx.supabase.co
-//   SUPABASE_SERVICE_KEY  -> la clé "service_role" (jamais exposée au navigateur)
+//   SUPABASE_SERVICE_KEY  -> la clé "service_role" (jamais exposée au navigateur) 
 //   ADMIN_API_KEY         -> ta clé, identique à SYNC_API_KEY configurée dans le panel admin
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
