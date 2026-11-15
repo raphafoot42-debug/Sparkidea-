@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 export function GoalOnboarding({ ideaId, projectTitle }: { ideaId: string; projectTitle: string }) {
   const router = useRouter();
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useState(""); 
   const [targetMetric, setTargetMetric] = useState<"clients" | "revenue" | "audience" | "">("");
   const [targetValue, setTargetValue] = useState("");
   const [communicationStyle, setCommunicationStyle] = useState<"visage" | "anonyme" | "ia_generee" | "pas_decide" | "">("");
