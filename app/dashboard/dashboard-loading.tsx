@@ -9,7 +9,7 @@ export default function DashboardLoading() {
         justifyContent: "center",
         gap: 14,
         background: "#05070a",
-      }}
+      }} 
     >
       <div
         style={{
