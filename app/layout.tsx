@@ -5,7 +5,7 @@ import { AffitorTracker } from "@/components/AffitorTracker";
 
 export const metadata: Metadata = {
   title: "Spark Idea — Ton idée, ta destinée",
-  description:
+  description: 
     "Décris ton idée de projet, obtiens un plan précis pour la lancer.",
 };
 
