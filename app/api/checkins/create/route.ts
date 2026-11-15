@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 // Chiffres purement déclaratifs, pas de plancher ni de plafond : c'est un
 // indicateur de motivation pour l'utilisateur, pas une donnée financière
 // vérifiée. Il peut monter, descendre, remettre 0 — comme il veut.
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   ideaId: z.string(),
   clients: z.number().int().min(0).max(1_000_000_000),
   revenue: z.number().min(0).max(1_000_000_000),
