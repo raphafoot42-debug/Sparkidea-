@@ -10,7 +10,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 // lit l'URL (ResetPasswordForm) du composant de page lui-même, qui se
 // contente de l'envelopper dans <Suspense>.
 function ResetPasswordForm() {
-  const router = useRouter();
+  const router = useRouter(); 
   const searchParams = useSearchParams(); 
   const token = searchParams.get("token") ?? "";
 
