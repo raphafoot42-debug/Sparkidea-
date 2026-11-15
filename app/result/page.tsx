@@ -7,7 +7,7 @@ import { AnimatedScore } from "@/components/AnimatedScore";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default function ResultPage() {
-  const router = useRouter();
+  const router = useRouter(); 
   const [schema, setSchema] = useState<SchemaResult | null>(null);
   const [verdict, setVerdict] = useState("");
   const [verdictOpen, setVerdictOpen] = useState(true);
