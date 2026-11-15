@@ -6,7 +6,7 @@ const MOTIVATIONS = [
   "Le meilleur moment pour avancer, c'était hier. Le deuxième meilleur, c'est maintenant.",
   "Ton futur toi te remerciera pour ce que tu fais aujourd'hui.",
   "La régularité bat le talent. Continue.",
-];
+]; 
 
 function pickMotivation(seed: string): string {
   let hash = 0;
