@@ -9,7 +9,7 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const json = await req.json().catch(() => null);
+  const json = await req.json().catch(() => null); 
   const parsed = BodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
