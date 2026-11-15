@@ -12,7 +12,7 @@ export function ExportPngButton({ schema }: { schema: SchemaResult }) {
 
     // --- Passe 1 : on mesure le texte réel pour connaître la hauteur exacte
     // avant de créer le canvas final, plutôt que d'estimer au pif (une
-    // estimation trop courte coupait le bas du schéma dans le PNG).
+    // estimation trop courte coupait le bas du schéma dans le PNG). 
     const measureCanvas = document.createElement("canvas");
     const mctx = measureCanvas.getContext("2d");
     if (!mctx) return;
