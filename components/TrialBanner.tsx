@@ -8,7 +8,7 @@ type Props = {
   trialStartedAt: Date | null;
   trialMessagesUsed: number;
 };
-
+ 
 // Affiché uniquement pour un utilisateur en essai gratuit (subscriptionStatus
 // === "TRIAL") — le composant appelant est responsable de ce check, pour
 // éviter un import inutile de lib/trial côté pages qui ne l'utilisent pas.
