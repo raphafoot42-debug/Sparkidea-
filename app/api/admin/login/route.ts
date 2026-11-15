@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const { code } = await req.json().catch(() => ({}));
+  const { code } = await req.json().catch(() => ({})); 
 
   const adminCode = process.env.ADMIN_CODE;
   if (!adminCode) {
