@@ -5,7 +5,7 @@ import { DEVICE_COOKIE, getOrCreateDeviceId } from "./device-lock";
 // ---------------------------------------------------------------------------
 // Anti-abus de l'ESSAI GRATUIT : un seul essai par appareil, et un plafond par
 // adresse IP, pour éviter de recréer des comptes avec d'autres emails afin
-// d'obtenir 7 jours gratuits à chaque fois.
+// d'obtenir 7 jours gratuits à chaque fois. 
 //
 // Deux signaux, volontairement complémentaires :
 //  1. L'appareil (cookie "spark_device", le même que celui de l'analyse
