@@ -10,7 +10,7 @@ type Props = {
   email: string;
   theme: "dark" | "light"; 
   language: "fr" | "en" | "ja" | "ru";
-};
+}; 
 
 const LANGUAGES: { value: "fr" | "en" | "ja" | "ru"; label: string }[] = [
   { value: "fr", label: "Français" },
