@@ -4,7 +4,7 @@
 // audience) : si l'utilisateur n'a pas fait de check-in un jour donné, on ne
 // met PAS 0 sur le graphique — on reporte la dernière valeur connue (il n'a
 // pas perdu tous ses abonnés du jour au lendemain, il n'a juste rien déclaré).
-// Les quêtes, elles, sont un cumul naturel (nombre de quêtes complétées à date),
+// Les quêtes, elles, sont un cumul naturel (nombre de quêtes complétées à date), 
 // donc pas besoin de report : le cumul ne redescend jamais tout seul.
 
 export type Period = "day" | "week" | "month" | "year";
