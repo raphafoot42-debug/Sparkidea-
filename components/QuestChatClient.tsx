@@ -9,7 +9,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gi
 
 // ---------------------------------------------------------------------------
 // Icônes — le strict minimum fonctionnel (joindre / micro / envoyer / fermer),
-// traits fins, monochrome, sans décoration. Pas de menu, pas d'icône pour
+// traits fins, monochrome, sans décoration. Pas de menu, pas d'icône pour 
 // des choses qui n'en ont pas besoin (le bandeau du haut se glisse tout seul,
 // pas besoin d'une icône de poignée dessus).
 // ---------------------------------------------------------------------------
