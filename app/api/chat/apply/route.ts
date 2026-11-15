@@ -6,7 +6,7 @@ import { NodeSchema, type SchemaResult } from "@/lib/ai/schema-generator";
 
 const BodySchema = z.object({
   ideaId: z.string(),
-  node: NodeSchema,
+  node: NodeSchema, 
 });
 
 export async function POST(req: NextRequest) {
