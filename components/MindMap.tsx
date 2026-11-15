@@ -7,7 +7,7 @@ type Props = {
   schema: SchemaResult;
   onSchemaChange?: (schema: SchemaResult) => void;
   // Si présent : chat authentifié, isolé sur CE projet précis (isolation 
-  // stricte gérée côté serveur dans /api/chat).
+  // stricte gérée côté serveur dans /api/chat). 
   ideaId?: string;
   // Sinon : chat gratuit, sans sauvegarde.
   freeMode?: boolean;
