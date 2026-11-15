@@ -10,7 +10,7 @@ export type Lang = "fr" | "en" | "ja" | "ru";
 export const settingsDict = {
   fr: {
     title: "Paramètres",
-    appearance: "Apparence",
+    appearance: "Apparence", 
     wallpaper: "Fond d'écran",
     dark: "Noir",
     light: "Blanc",
