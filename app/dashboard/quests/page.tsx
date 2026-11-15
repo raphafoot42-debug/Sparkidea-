@@ -7,7 +7,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { AllQuestsClient } from "@/components/AllQuestsClient";
 import { GoalOnboarding } from "@/components/GoalOnboarding";
 import { GoalStrip } from "@/components/GoalStrip";
-import { QuestChatClient } from "@/components/QuestChatClient";
+import { QuestChatClient } from "@/components/QuestChatClient"; 
 import { ensureQuestBatch } from "@/lib/quests";
 import { computeTechnicalProgress } from "@/lib/progress";
 import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
