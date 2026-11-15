@@ -8,7 +8,7 @@ import Link from "next/link";
 // l'IA (donc un appel payant à Claude). Par défaut, Next.js précharge en
 // arrière-plan TOUT lien visible à l'écran — même juste affiché dans le
 // menu, jamais cliqué. Ça veut dire que le menu pouvait, à lui seul,
-// redéclencher une génération de quêtes payante à chaque fois qu'il
+// redéclencher une génération de quêtes payante à chaque fois qu'il 
 // s'affichait, sans aucune action de l'utilisateur. C'est très
 // probablement la cause du bug de génération en boucle qui a consommé du
 // crédit API pour rien. `prefetch={false}` désactive ce préchargement
