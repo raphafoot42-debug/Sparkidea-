@@ -7,7 +7,7 @@ import { QUEST_CHAT_MESSAGE_LIMITS } from "@/lib/plan-limits";
 const PLANS = [
   {
     id: "STARTER" as const,
-    name: "Starter",
+    name: "Starter", 
     price: "19€",
     features: ["1 idée active", "Schéma complet + carte mentale", `${QUEST_CHAT_MESSAGE_LIMITS.STARTER} messages IA / mois`],
     highlight: false,
