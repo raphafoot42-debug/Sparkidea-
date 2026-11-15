@@ -6,7 +6,7 @@
 export const TRIAL_DURATION_MS = 24 * 60 * 60 * 1000;
 export const TRIAL_MESSAGE_LIMIT = 15;
 
-type TrialUser = {
+type TrialUser = { 
   subscriptionStatus: string;
   trialStartedAt: Date | null;
 };
