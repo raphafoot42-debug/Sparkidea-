@@ -9,7 +9,7 @@ import { AnalyseClient } from "@/components/AnalyseClient";
 import { generateStrategicAnalysis, generateProgressSummary, type StrategicAnalysis } from "@/lib/ai/analysis-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
-export default async function AnalysePage({
+export default async function AnalysePage({ 
   searchParams,
 }: {
   searchParams: { idea?: string };
