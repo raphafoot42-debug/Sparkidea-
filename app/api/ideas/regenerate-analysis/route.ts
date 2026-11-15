@@ -7,7 +7,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 const BodySchema = z.object({ ideaId: z.string() });
 
-// Régénération explicite de l'analyse stratégique — utile après un
+// Régénération explicite de l'analyse stratégique — utile après un 
 // changement de schéma, ou si l'utilisateur veut une nouvelle lecture.
 // Volontairement manuel (bouton), jamais automatique à chaque visite —
 // voir le cache dans app/dashboard/analyse/page.tsx.
