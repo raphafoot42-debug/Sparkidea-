@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 function headers() {
   return {
     apikey: SUPABASE_SERVICE_KEY,
-    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 
     "Content-Type": "application/json"
   };
 }
