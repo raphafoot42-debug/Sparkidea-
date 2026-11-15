@@ -8,7 +8,7 @@ import { AnimatedNumber } from "@/components/AnimatedNumber";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
 
-type QaTurn = { question: string; answer: string };
+type QaTurn = { question: string; answer: string }; 
 
 export default function HomePage() {
   const router = useRouter();
