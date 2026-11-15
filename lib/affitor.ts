@@ -6,7 +6,7 @@ export async function trackAffitorSignup(data: {
   email: string;
   clickId?: string;
 }) {
-  const programId = process.env.AFFITOR_PROGRAM_ID || "MON_PROGRAM_ID_AFFITOR";
+  const programId = process.env.AFFITOR_PROGRAM_ID || "MON_PROGRAM_ID_AFFITOR"; 
   const apiKey = process.env.AFFITOR_API_KEY;
 
   if (!apiKey) {
