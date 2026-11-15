@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 
-export default function AdminLoginPage() {
+export default function AdminLoginPage() { 
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
