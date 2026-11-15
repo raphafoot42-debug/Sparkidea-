@@ -6,7 +6,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 type Props = {
   ideaId: string;
-  initialSchema: SchemaResult;
+  initialSchema: SchemaResult; 
   hasRevenue?: boolean;
 };
 
