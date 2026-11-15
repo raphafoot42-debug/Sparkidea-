@@ -10,7 +10,7 @@ const BodySchema = z.object({
   goal: z.string().min(3).max(600),
   targetMetric: z.enum(["clients", "revenue", "audience"]).optional(),
   targetValue: z.number().positive().optional(),
-  // Préférence de communication pour la piste marketing — pas besoin d'un
+  // Préférence de communication pour la piste marketing — pas besoin d'un 
   // champ dédié en base : stockée comme un deuxième "Goal" (pas d'appel IA
   // pour celui-ci, coût nul), lu automatiquement par generateQuestBatch
   // puisqu'il agrège déjà TOUS les Goal d'une idée dans le prompt. Ça évite
