@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 // On exige TOUJOURS le mot de passe actuel pour changer l'email ou le mot de
 // passe — même connecté, sans ça n'importe qui avec une session ouverte sur
 // un ordinateur partagé pourrait détourner le compte.
-const BodySchema = z
+const BodySchema = z 
   .object({
     currentPassword: z.string().min(1, "Mot de passe actuel requis."),
     newEmail: z.string().email("Email invalide.").optional(),
