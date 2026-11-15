@@ -8,7 +8,7 @@ import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from 
 
 const BodySchema = z.object({ 
   ideaId: z.string(),
-  // Avant : 500 caractères max, incohérent avec le chat de l'assistant
+  // Avant : 500 caractères max, incohérent avec le chat de l'assistant 
   // personnel (8000). Aligné pour la même raison : un vrai paragraphe ne
   // doit pas être coupé.
   message: z.string().min(1).max(8000),
