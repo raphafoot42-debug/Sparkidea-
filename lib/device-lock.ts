@@ -4,7 +4,7 @@ const LOCK_DURATION_DAYS = 5;
 const DEVICE_COOKIE = "spark_device";
 
 // -----------------------------------------------------------------------
-// Rappel honnête (comme discuté à l'oral) : ce blocage repose sur un cookie,
+// Rappel honnête (comme discuté à l'oral) : ce blocage repose sur un cookie, 
 // donc quelqu'un qui efface ses cookies ou navigue en privé peut le
 // contourner. Ce n'est PAS un verrou infranchissable — c'est une protection
 // basique contre l'abus involontaire ou répété, pas contre un utilisateur
