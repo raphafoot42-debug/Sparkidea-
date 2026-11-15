@@ -7,7 +7,7 @@ type Goal = {
   id: string;
   text: string;
 };
-
+ 
 export function GoalStrip({
   ideaId,
   goals,
