@@ -6,7 +6,7 @@ import { answerChatMessage, type SchemaResult } from "@/lib/ai/schema-generator"
 import { QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
 import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial";
 
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   ideaId: z.string(),
   // Avant : 500 caractères max, incohérent avec le chat de l'assistant
   // personnel (8000). Aligné pour la même raison : un vrai paragraphe ne
