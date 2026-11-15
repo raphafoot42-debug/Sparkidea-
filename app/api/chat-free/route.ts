@@ -8,7 +8,7 @@ const BodySchema = z.object({
 });
 
 // Version gratuite du chat : aucune sauvegarde, le schéma transite entier
-// à chaque appel (il n'existe qu'en mémoire côté navigateur tant que le
+// à chaque appel (il n'existe qu'en mémoire côté navigateur tant que le 
 // paiement n'est pas confirmé, comme décidé).
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
