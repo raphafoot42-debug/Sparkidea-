@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 export function AnimatedScore({ value }: { value: number }) {
   const [display, setDisplay] = useState(0);
 
-  useEffect(() => {
+  useEffect(() => { 
     const duration = 800;
     const start = performance.now();
 
