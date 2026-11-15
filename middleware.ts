@@ -6,7 +6,7 @@ export function middleware(req: NextRequest) {
   // --- Routes dashboard (utilisateurs connectés) ---
   if (path.startsWith("/dashboard")) {
     const session = req.cookies.get("spark_session")?.value;
-    if (!session) return NextResponse.redirect(new URL("/login", req.url));
+    if (!session) return NextResponse.redirect(new URL("/login", req.url)); 
   }
 
   // --- Routes admin (code admin) ---
