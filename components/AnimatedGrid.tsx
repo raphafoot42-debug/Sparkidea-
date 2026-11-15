@@ -10,7 +10,7 @@
 // "intensity" est conservée (les 14 pages qui utilisent ce composant n'ont
 // rien à changer) mais ne pilote plus qu'une opacité très légèrement
 // différente entre la page d'accueil et le reste de l'app.
-export function AnimatedGrid({
+export function AnimatedGrid({ 
   intensity = "intense",
 }: {
   intensity?: "intense" | "discrete";
