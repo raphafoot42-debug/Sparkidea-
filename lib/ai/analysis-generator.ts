@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SchemaResult } from "./schema-generator";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+ 
 // ---------------------------------------------------------------------------
 // ANALYSE STRATÉGIQUE — remplace l'ancien "paragraphe de progression" comme
 // contenu principal de /dashboard/analyse (décidé avec Raphaël, suite au
