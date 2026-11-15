@@ -7,7 +7,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // ---------------------------------------------------------------------------
 // LA GRILLE DE CRITÈRES — validée avec Raphaël. C'est le cœur du produit.
 // L'IA ne "réfléchit" jamais librement : elle remplit cette grille fixe pour
-// chaque idée, ce qui garantit une analyse cohérente et reproductible plutôt
+// chaque idée, ce qui garantit une analyse cohérente et reproductible plutôt 
 // qu'un texte différent à chaque génération.
 // ---------------------------------------------------------------------------
 export const CRITERIA = [
