@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  startOfMonth.setHours(0, 0, 0, 0); 
 
   const count = await db.deviceLock.count({ where: { createdAt: { gte: startOfMonth } } });
 
