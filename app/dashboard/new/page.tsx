@@ -6,7 +6,7 @@ import { DrawerNav } from "@/components/DrawerNav";
 import { NewIdeaClient } from "@/components/NewIdeaClient";
 
 export default async function NewIdeaPage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(); 
   if (!user) redirect("/login");
   if (!hasDashboardAccess(user)) redirect("/dashboard/settings?blocked=1");
 
