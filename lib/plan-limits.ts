@@ -7,7 +7,7 @@
 //
 // Relevé le 03/09 : le coût réel en tokens Claude est de l'ordre de
 // quelques centimes par message, même avec une image jointe. Les plafonds
-// ci-dessous sont calés sur un budget coût-IA cible par forfait plutôt que
+// ci-dessous sont calés sur un budget coût-IA cible par forfait plutôt que 
 // choisis au hasard : ~1,5€/mois de coût IA total pour Starter (schéma +
 // quêtes + messages sur 1 idée), ~3,5€/mois pour Élite (jusqu'à 15 idées).
 // Le mode essai (TRIAL_MESSAGE_LIMIT, dans lib/trial.ts) est indépendant
