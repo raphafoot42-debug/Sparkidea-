@@ -7,7 +7,7 @@ import { AdminLogoutButton } from "./AdminLogoutButton";
 
 const PLAN_PRICE_EUR: Record<string, number> = { STARTER: 19, PRO: 49, STUDIO: 97 };
 
-export default async function AdminPage() {
+export default async function AdminPage() { 
   if (!verifyAdminSession()) redirect("/admin/login");
 
   const users = await db.user.findMany({
