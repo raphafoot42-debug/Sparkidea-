@@ -6,7 +6,7 @@ type Row = {
   id: string;
   email: string;
   plan: string | null;
-  subscriptionStatus: string;
+  subscriptionStatus: string; 
   createdAt: string;
   lastLoginAt: string | null;
   ideasCount: number;
