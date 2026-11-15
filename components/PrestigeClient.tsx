@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type Suggestion = { title: string; pitch: string };
 
 // N'apparaît QUE si le projet est à 100% (vérifié côté serveur avant de
-// monter ce composant — voir app/dashboard/page.tsx). Rien n'est jamais
+// monter ce composant — voir app/dashboard/page.tsx). Rien n'est jamais 
 // réinitialisé : le schéma, l'historique et les quêtes déjà faites restent
 // intacts, on ajoute juste un nouveau palier au même projet.
 export function PrestigeClient({ ideaId }: { ideaId: string }) {
