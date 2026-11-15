@@ -6,7 +6,7 @@
 // Le vrai garde-fou de coût, c'est TRIAL_MESSAGE_LIMIT : une fois atteint,
 // le chat IA est bloqué même s'il reste des jours d'essai. La durée, elle,
 // ne coûte rien de plus toute seule.
-// Pour ajuster : change UNIQUEMENT ces deux constantes, tout le reste de
+// Pour ajuster : change UNIQUEMENT ces deux constantes, tout le reste de 
 // l'application (bannière, quota affiché, API) les lit d'ici.
 export const TRIAL_DURATION_DAYS = 7;
 export const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
