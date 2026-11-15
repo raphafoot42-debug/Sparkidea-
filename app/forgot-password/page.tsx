@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordPage() { 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
