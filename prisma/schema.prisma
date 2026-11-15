@@ -21,7 +21,7 @@ datasource db {
 // avec les valeurs autorisées documentées en commentaire, validées côté appli.
 // Plan               : "STARTER" (9€) | "PRO" (24€) | "STUDIO" (74€)
 // SubscriptionStatus : "ACTIVE" | "TRIAL" | "CANCELED" | "NONE"
-// "TRIAL" = essai gratuit 24h après inscription, avant tout paiement — voir lib/trial.ts
+// "TRIAL" = essai gratuit de 7 jours après inscription, avant tout paiement — voir lib/trial.ts
 
 model User {
   id                String   @id @default(cuid())
@@ -55,7 +55,7 @@ model User {
   plan                   String?             // "STARTER" | "PRO"
   subscriptionStatus     String              @default("NONE") // "ACTIVE" | "TRIAL" | "CANCELED" | "NONE"
 
-  // Essai gratuit 24h (voir lib/trial.ts) : démarre à l'inscription, avant
+  // Essai gratuit de 7 jours (voir lib/trial.ts) : démarre à l'inscription, avant
   // tout paiement. trialMessagesUsed plafonne le coût IA en cas d'abus.
   trialStartedAt         DateTime?
   trialMessagesUsed      Int                 @default(0)
@@ -284,4 +284,20 @@ model PendingCheckout {
   createdAt     DateTime @default(now())
 
   @@index([token])
+}
+
+// Anti-abus de l'essai gratuit (voir lib/trial-guard.ts) : une ligne par essai
+// accordé. deviceHash = cookie de l'appareil (un essai par appareil, à vie) ;
+// ipHash = IP hachée et salée (jamais l'IP en clair), pour plafonner le
+// nombre d'essais par réseau. Pas de relation vers User exprès : si un compte
+// est supprimé, la trace de l'essai déjà consommé reste.
+model TrialClaim {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceHash String?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([deviceHash])
+  @@index([ipHash, createdAt])
 }
