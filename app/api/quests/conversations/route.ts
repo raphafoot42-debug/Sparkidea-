@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 // Claude.ai dans le chat flottant (QuestChatClient).
 export async function GET(req: NextRequest) {
   let user;
-  try {
+  try { 
     user = await requireUser();
   } catch {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });
