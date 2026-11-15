@@ -11,7 +11,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 // contente de l'envelopper dans <Suspense>.
 function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); 
   const token = searchParams.get("token") ?? "";
 
   const [password, setPassword] = useState("");
