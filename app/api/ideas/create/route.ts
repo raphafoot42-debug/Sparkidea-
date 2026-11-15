@@ -7,7 +7,7 @@ import { MAX_IDEAS, toPlanKey } from "@/lib/plan-limits";
 import { hasDashboardAccess } from "@/lib/trial";
 
 // Contrairement à /api/generate (étape gratuite, anonyme, anti-abus par
-// device), cette route sert un utilisateur DÉJÀ connecté et payant qui veut
+// device), cette route sert un utilisateur DÉJÀ connecté et payant qui veut 
 // créer un nouveau projet directement depuis son dashboard — pas de détour
 // par l'accueil ni par sessionStorage.
 const BodySchema = z.object({
