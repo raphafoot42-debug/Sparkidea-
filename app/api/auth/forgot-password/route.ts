@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createPasswordResetToken } from "@/lib/auth";
 import { sendEmail } from "@/lib/email/send";
-
+ 
 const BodySchema = z.object({ email: z.string().email("Email invalide.") });
 
 export async function POST(req: NextRequest) {
