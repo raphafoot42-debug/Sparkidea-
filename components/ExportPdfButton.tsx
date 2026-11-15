@@ -7,7 +7,7 @@ import type { SchemaResult } from "@/lib/ai/schema-generator";
 // une image comme ExportPngButton.tsx. Réservé aux forfaits Pro/Élite (voir
 // HAS_PDF_EXPORT dans lib/plan-limits.ts), donc rendu uniquement dans le
 // dashboard authentifié, jamais sur la page de partage publique.
-export function ExportPdfButton({ schema }: { schema: SchemaResult }) {
+export function ExportPdfButton({ schema }: { schema: SchemaResult }) { 
   function handleExport() {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
