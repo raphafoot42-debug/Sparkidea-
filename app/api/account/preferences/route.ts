@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 
 const BodySchema = z.object({
   theme: z.enum(["dark", "light"]).optional(),
-  language: z.enum(["fr", "en", "ja", "ru"]).optional(),
+  language: z.enum(["fr", "en", "ja", "ru"]).optional(), 
 });
 
 export async function POST(req: NextRequest) {
