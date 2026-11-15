@@ -5,7 +5,7 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const POSTBACK_API_KEY = process.env.POSTBACK_API_KEY || "";
-const VALID_TYPES = ["register", "ftd", "deposit", "cpa", "ngr"];
+const VALID_TYPES = ["register", "ftd", "deposit", "cpa", "ngr"]; 
 
 function headers() {
   return {
