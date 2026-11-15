@@ -7,7 +7,7 @@ import { trackAffitorSignup } from "@/lib/affitor";
 const BodySchema = z.object({
   email: z.string().email("Email invalide."),
   password: z.string().min(8, "8 caractères minimum."),
-  // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé
+  // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé 
   // par le tunnel "génère ton idée d'abord" (ex: lien direct vers /signup).
   firstName: z.string().trim().max(30).optional(),
 });
