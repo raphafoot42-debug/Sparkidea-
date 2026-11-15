@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer from "nodemailer"; 
 
 // -----------------------------------------------------------------------
 // SOLUTION TEMPORAIRE — à retirer dès qu'un vrai domaine est vérifié sur
