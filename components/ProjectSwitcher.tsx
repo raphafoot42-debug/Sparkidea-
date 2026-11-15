@@ -6,7 +6,7 @@ type Project = { id: string; title: string };
 
 export function ProjectSwitcher({ projects, activeIdeaId }: { projects: Project[]; activeIdeaId: string }) {
   const router = useRouter();
-  const activeIndex = projects.findIndex((p) => p.id === activeIdeaId);
+  const activeIndex = projects.findIndex((p) => p.id === activeIdeaId); 
   const active = projects[activeIndex];
 
   function switchProject(dir: 1 | -1) {
