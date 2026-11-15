@@ -9,7 +9,7 @@ type RawCheckIn = { createdAt: string; clients: number; revenue: number; audienc
 type StrategicAnalysis = {
   score: number;
   scoreExplanation: string;
-  marche: string;
+  marche: string; 
   cible: string;
   problemeResolu: string;
   concurrence: string;
