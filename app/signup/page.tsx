@@ -11,7 +11,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [backUrl, setBackUrl] = useState("/");
+  const [backUrl, setBackUrl] = useState("/"); 
 
   useEffect(() => {
     try {
