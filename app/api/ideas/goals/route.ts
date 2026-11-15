@@ -9,7 +9,7 @@ const BodySchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("create"),
     ideaId: z.string(),
-    goal: z.string().trim().min(3).max(600),
+    goal: z.string().trim().min(3).max(600), 
   }),
   z.object({
     action: z.literal("update"),
