@@ -9,7 +9,7 @@ export async function POST() {
   let user;
   try {
     user = await requireUser();
-  } catch {
+  } catch { 
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });
   }
 
