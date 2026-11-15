@@ -10,7 +10,7 @@ export const PLAN_PRICE_IDS = {
   STARTER: process.env.STRIPE_PRICE_STARTER!,
   PRO: process.env.STRIPE_PRICE_PRO!,
   STUDIO: process.env.STRIPE_PRICE_STUDIO!,
-} as const;
+} as const; 
 
 export function priceIdToPlan(priceId: string): "STARTER" | "PRO" | "STUDIO" | null {
   if (priceId === PLAN_PRICE_IDS.STARTER) return "STARTER";
