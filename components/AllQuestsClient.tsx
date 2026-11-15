@@ -11,7 +11,7 @@ type QuestItem = {
   status: "PENDING" | "DONE";
 };
 
-const TRACK_LABELS: Record<string, string> = {
+const TRACK_LABELS: Record<string, string> = { 
   marketing: "Marketing",
   technique: "Technique",
 };
