@@ -8,7 +8,7 @@ const BodySchema = z.object({ userId: z.string() });
 
 export async function POST(req: NextRequest) {
   if (!verifyAdminSession()) {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
+    return NextResponse.json({ error: "Non autorisé." }, { status: 403 }); 
   }
 
   const json = await req.json().catch(() => null);
