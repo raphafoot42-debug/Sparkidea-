@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export function NewIdeaClient() {
   const router = useRouter();
   const [idea, setIdea] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); 
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
