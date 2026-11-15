@@ -6,7 +6,7 @@ import { SettingsClient } from "@/components/SettingsClient";
 import { hasDashboardAccess } from "@/lib/trial";
 
 export default async function SettingsPage({
-  searchParams,
+  searchParams, 
 }: {
   searchParams: { blocked?: string };
 }) {
