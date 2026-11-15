@@ -4,7 +4,7 @@
 // uniquement du texte, ce qui pouvait donner une impression de "vite
 // fait" à un client qui découvre le produit.
 //
-// Nécessite la variable d'environnement PEXELS_API_KEY (clé gratuite sur
+// Nécessite la variable d'environnement PEXELS_API_KEY (clé gratuite sur 
 // https://www.pexels.com/api/, aucune carte bancaire demandée).
 //
 // Comportement en cas d'absence de clé ou d'échec : retourne null plutôt
