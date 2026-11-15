@@ -7,7 +7,7 @@ import {
   generateVerdict,
   type QaTurn,
 } from "@/lib/ai/schema-generator";
-import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
+import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants"; 
 import {
   DEVICE_COOKIE,
   getOrCreateDeviceId,
