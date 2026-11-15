@@ -15,7 +15,7 @@ const BodySchema = z.object({
   schemaData: z.unknown(),
 });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest) { 
   let user;
   try {
     user = await requireUser();
