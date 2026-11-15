@@ -3,7 +3,7 @@ import { generateQuestBatch, type Track } from "./ai/quest-generator";
 import type { SchemaResult } from "./ai/schema-generator"; 
 
 const TRACKS: Track[] = ["marketing", "technique"];
-
+ 
 // Garantit qu'il existe au moins une quête PENDING pour CHAQUE piste
 // (marketing ET technique) de cette idée — génère un nouveau lot pour la
 // piste concernée si besoin. Appelé au chargement des pages dashboard/quêtes.
