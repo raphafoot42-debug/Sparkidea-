@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 
 const BodySchema = z.object({
   plan: z.enum(["STARTER", "PRO", "STUDIO"]),
-  // Optionnel : un utilisateur qui s'inscrit directement (sans passer par
+  // Optionnel : un utilisateur qui s'inscrit directement (sans passer par 
   // l'analyse gratuite de l'accueil) doit pouvoir payer quand même, sans
   // idée en attente — il en créera une depuis /dashboard/new après paiement.
   pendingIdea: z 
