@@ -9,7 +9,7 @@ export function AdminLogoutButton() {
     setLoading(true);
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.replace("/admin/login");
-  }
+  } 
 
   return (
     <button
