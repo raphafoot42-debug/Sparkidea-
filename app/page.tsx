@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatedGrid } from "@/components/AnimatedGrid"; 
 import { AnimatedNumber } from "@/components/AnimatedNumber";
-import type { SchemaResult } from "@/lib/ai/schema-generator";
+import type { SchemaResult } from "@/lib/ai/schema-generator"; 
 import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
 
 type QaTurn = { question: string; answer: string }; 
