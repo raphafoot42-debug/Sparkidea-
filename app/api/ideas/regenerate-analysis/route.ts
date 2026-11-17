@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateStrategicAnalysis } from "@/lib/ai/analysis-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
-
+ 
 const BodySchema = z.object({ ideaId: z.string() });
 
 // Régénération explicite de l'analyse stratégique — utile après un 
