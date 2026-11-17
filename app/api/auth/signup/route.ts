@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { createSession, hashPassword } from "@/lib/auth";
 import { trackAffitorSignup } from "@/lib/affitor";
 
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   email: z.string().email("Email invalide."),
   password: z.string().min(8, "8 caractères minimum."),
   // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé 
