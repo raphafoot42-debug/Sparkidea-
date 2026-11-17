@@ -5,7 +5,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
 });
 
 // Fait le lien entre nos trois forfaits et les Price ID Stripe (à remplir 
-// dans .env une fois créés dans le dashboard Stripe).
+// dans .env une fois créés dans le dashboard Stripe). 
 export const PLAN_PRICE_IDS = {
   STARTER: process.env.STRIPE_PRICE_STARTER!,
   PRO: process.env.STRIPE_PRICE_PRO!,
