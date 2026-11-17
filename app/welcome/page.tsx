@@ -7,7 +7,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 const TESTIMONIALS = [
   {
     initials: "CR",
-    name: "Camille R.", 
+    name: "Camille R.",  
     plan: "forfait momentum",
     color: "#5DCAA5",
     // Catégorie utilisée pour faire remonter le témoignage le plus pertinent
