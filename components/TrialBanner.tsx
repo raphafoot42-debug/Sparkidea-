@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TRIAL_MESSAGE_LIMIT, trialMsRemaining, trialMessagesRemaining } from "@/lib/trial";
 
 type Props = {
-  trialStartedAt: Date | null;
+  trialStartedAt: Date | null; 
   trialMessagesUsed: number;
 };
  
