@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { requireUser } from "@/lib/auth";
 import { stripe, PLAN_PRICE_IDS } from "@/lib/stripe";
 import { db } from "@/lib/db";
-
+ 
 const BodySchema = z.object({
   plan: z.enum(["STARTER", "PRO", "STUDIO"]),
   // Optionnel : un utilisateur qui s'inscrit directement (sans passer par 
