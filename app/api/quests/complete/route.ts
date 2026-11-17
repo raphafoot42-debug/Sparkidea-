@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ensureNextBatchForQuestTrack } from "@/lib/quests";
 
-const BodySchema = z.object({
+const BodySchema = z.object({ 
   questId: z.string(),
 });
  
