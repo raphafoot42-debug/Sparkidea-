@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { DrawerNav } from "@/components/DrawerNav"; 
-import { AnimatedGrid } from "@/components/AnimatedGrid";
+import { AnimatedGrid } from "@/components/AnimatedGrid"; 
 import { DashboardClient } from "@/components/DashboardClient";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ensureQuestBatch } from "@/lib/quests";
