@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AnimatedGrid } from "@/components/AnimatedGrid"; 
+import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
-import type { SchemaResult } from "@/lib/ai/schema-generator"; 
+import type { SchemaResult } from "@/lib/ai/schema-generator";
 import { MAX_CLARIFYING_QUESTIONS } from "@/lib/qa-constants";
+import { PricingPlans } from "@/components/PricingPlans";
+import { TRIAL_DURATION_DAYS, TRIAL_MESSAGE_LIMIT } from "@/lib/trial";
 
-type QaTurn = { question: string; answer: string }; 
+type QaTurn = { question: string; answer: string };
 
 export default function HomePage() {
   const router = useRouter();
@@ -617,6 +619,145 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Exemple de résultat — aperçu ILLUSTRATIF d'un plan généré (idée
+          fictive), pour montrer ce que le visiteur obtiendra. Données
+          statiques, aucun appel IA : zéro coût, et clairement étiqueté
+          comme exemple pour ne jamais passer pour le résultat d'un vrai
+          client. */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "8vh 24px 6vh",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
+          Exemple de résultat
+        </div>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 10 }}>
+          Voilà ce que tu reçois pour une idée
+        </h2>
+        <p style={{ textAlign: "center", fontSize: 12.5, color: "var(--muted)", marginBottom: 32 }}>
+          Exemple illustratif, basé sur : « une appli qui aide les artisans à faire leurs devis en 2 minutes ».
+        </p>
+
+        <div className="panel" style={{ maxWidth: 860, margin: "0 auto", padding: 26, borderRadius: 18 }}>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center", marginBottom: 24 }}>
+            <div
+              style={{
+                width: 84,
+                height: 84,
+                borderRadius: "50%",
+                border: "2px solid var(--line)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1 }}>7,2</div>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>/ 10</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 4 }}>DevisRapide</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55 }}>
+                Un besoin clair et fréquent, une cible facile à atteindre. Le point à travailler : te démarquer d&apos;une
+                concurrence déjà installée.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px 28px", marginBottom: 26 }}>
+            {[
+              { label: "Problème résolu", score: 8 },
+              { label: "Cible", score: 8 },
+              { label: "Concurrence", score: 5 },
+              { label: "Différenciation possible", score: 6 },
+              { label: "Complexité de réalisation", score: 7 },
+              { label: "Modèle de revenu", score: 8 },
+            ].map((c) => (
+              <div key={c.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}>
+                  <span style={{ color: "var(--muted)" }}>{c.label}</span>
+                  <span>{c.score}/10</span>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.08)" }}>
+                  <div
+                    style={{
+                      width: `${c.score * 10}%`,
+                      height: "100%",
+                      borderRadius: 3,
+                      background: "linear-gradient(90deg, var(--line), var(--line2))",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 22 }}>
+            {[
+              { tag: "Force", color: "var(--success)", text: "Les artisans perdent du temps sur les devis : la douleur est concrète et revient chaque semaine." },
+              { tag: "Risque", color: "var(--danger)", text: "Des logiciels de devis existent déjà : sans angle précis (métier, rapidité), tu seras noyé dans la masse." },
+              { tag: "À faire", color: "var(--line)", text: "Interroger 10 artisans d'un même métier pour valider le prix qu'ils accepteraient de payer." },
+            ].map((n) => (
+              <div key={n.tag} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: n.color, marginBottom: 6 }}>
+                  {n.tag}
+                </div>
+                <div style={{ fontSize: 12.5, color: "#cbd5e1", lineHeight: 1.55 }}>{n.text}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 18 }}>
+            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+              Tes quêtes du jour
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { track: "Marketing", text: "Contacter 3 artisans dans ton réseau et leur demander comment ils font leurs devis aujourd'hui." },
+                { track: "Technique", text: "Dessiner sur papier l'écran « nouveau devis » en 4 champs maximum." },
+              ].map((q) => (
+                <div
+                  key={q.text}
+                  style={{ display: "flex", gap: 12, alignItems: "flex-start", fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}
+                >
+                  <span style={{ fontSize: 10.5, color: "var(--line)", border: "1px solid rgba(34,211,238,0.35)", borderRadius: 20, padding: "2px 8px", flexShrink: 0, marginTop: 1 }}>
+                    {q.track}
+                  </span>
+                  {q.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tarifs — affichage seul, sans bouton (décidé avec Raphaël) : les
+          prix et le détail de chaque forfait viennent de lib/plan-limits.ts,
+          la même source que la page /pricing. */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "8vh 24px 8vh",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
+          Tarifs
+        </div>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 28 }}>
+          Choisis le forfait qui te correspond
+        </h2>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <PricingPlans mode="display" />
+        </div>
+      </div>
+
       {/* Vidéo de démonstration du produit — désactivée pour l'instant
           (commentée), le temps que Raphaël fournisse le fichier réel.
           Dès qu'il le donne : déposer le fichier dans /public sous le nom
@@ -686,6 +827,49 @@ export default function HomePage() {
           alt="Conversations réelles de clients Spark Idea, partagées avec leur autorisation"
           style={{ width: "100%", maxWidth: 900, borderRadius: 16, border: "1px solid var(--border)" }}
         />
+      </div>
+
+      {/* Questions fréquentes — réponses alignées sur le fonctionnement réel
+          (lib/trial.ts et lib/plan-limits.ts), rien de promis en plus. */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: "8vh 24px 12vh",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
+          Questions fréquentes
+        </div>
+        <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 28 }}>
+          Avant de te lancer
+        </h2>
+        <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            {
+              q: "Est-ce vraiment gratuit pour commencer ?",
+              a: `L'analyse de ton idée est gratuite, sans inscription ni carte bancaire. Ensuite, tu as ${TRIAL_DURATION_DAYS} jours d'essai gratuit avec toutes les fonctionnalités débloquées, limités à 1 projet et ${TRIAL_MESSAGE_LIMIT} messages IA.`,
+            },
+            {
+              q: "Que se passe-t-il à la fin de l'essai ?",
+              a: "L'accès au dashboard est mis en pause jusqu'à ce que tu choisisses un forfait. Rien n'est facturé automatiquement, puisqu'aucune carte n'est demandée pour l'essai.",
+            },
+            {
+              q: "Puis-je changer ou arrêter mon abonnement ?",
+              a: "Oui, tu peux résilier depuis les réglages de ton compte, et la résiliation prend effet immédiatement. En mensuel, il n'y a aucun engagement. En annuel, tu paies une fois pour 12 mois, à un tarif plus avantageux.",
+            },
+            {
+              q: "Spark Idea me garantit-il le succès ?",
+              a: "Non, et personne ne peut le faire honnêtement. Spark Idea t'aide à structurer ton idée, à repérer les risques et à avancer chaque jour avec des actions concrètes.",
+            },
+          ].map((item) => (
+            <details key={item.q} className="panel" style={{ padding: "14px 18px", borderRadius: 12 }}>
+              <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 500 }}>{item.q}</summary>
+              <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.65 }}>{item.a}</p>
+            </details>
+          ))}
+        </div>
       </div>
 
       <Link
