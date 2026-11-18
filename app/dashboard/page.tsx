@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { DrawerNav } from "@/components/DrawerNav"; 
-import { AnimatedGrid } from "@/components/AnimatedGrid"; 
+import { DrawerNav } from "@/components/DrawerNav";
+import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { DashboardClient } from "@/components/DashboardClient";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { ensureQuestBatch } from "@/lib/quests";
@@ -14,7 +14,8 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { ShareButton } from "@/components/ShareButton";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
 import { QuestChatClient } from "@/components/QuestChatClient";
-import { HAS_PDF_EXPORT, QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { canExportPdf, QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { TRIAL_MESSAGE_LIMIT } from "@/lib/trial";
 import type { SchemaResult } from "@/lib/ai/schema-generator"; 
 
 export default async function DashboardPage({
@@ -35,10 +36,15 @@ export default async function DashboardPage({
     select: { id: true, title: true },
   });
 
-  const aiMessageLimit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
-  const aiUsedThisMonth = await db.usageLog.count({
-    where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
-  });
+  // Pendant l'essai, le vrai plafond est celui de l'essai (compteur partagé
+  // User.trialMessagesUsed), pas celui d'un forfait payant.
+  const isTrial = user.subscriptionStatus === "TRIAL";
+  const aiMessageLimit = isTrial ? TRIAL_MESSAGE_LIMIT : QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const aiUsedThisMonth = isTrial
+    ? user.trialMessagesUsed
+    : await db.usageLog.count({
+        where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
+      });
 
   if (allIdeas.length === 0) {
     return (
@@ -153,7 +159,7 @@ export default async function DashboardPage({
           <span style={{ fontSize: 12, color: "var(--muted)" }}>Schéma complet du projet</span>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <ShareButton />
-            {HAS_PDF_EXPORT[toPlanKey(user.plan)] ? (
+            {canExportPdf(user) ? (
               <ExportPdfButton schema={schema} />
             ) : (
               <Link href="/pricing" className="btn-secondary" style={{ fontSize: 12, padding: "5px 12px" }}>
