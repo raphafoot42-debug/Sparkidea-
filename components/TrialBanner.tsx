@@ -5,10 +5,10 @@ import Link from "next/link";
 import { TRIAL_MESSAGE_LIMIT, trialMsRemaining, trialMessagesRemaining } from "@/lib/trial";
 
 type Props = {
-  trialStartedAt: Date | null; 
+  trialStartedAt: Date | null;
   trialMessagesUsed: number;
 };
- 
+
 // Affiché uniquement pour un utilisateur en essai gratuit (subscriptionStatus
 // === "TRIAL") — le composant appelant est responsable de ce check, pour
 // éviter un import inutile de lib/trial côté pages qui ne l'utilisent pas.
@@ -24,8 +24,13 @@ export function TrialBanner({ trialStartedAt, trialMessagesUsed }: Props) {
     return () => clearInterval(interval);
   }, [trialStartedAt]);
 
-  const hoursLeft = Math.floor(msLeft / (60 * 60 * 1000));
+  const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+  const hoursLeft = Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
   const minutesLeft = Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000));
+  // Plus de 24h restantes : "6 j 4 h" suffit ; en dernier jour, on repasse au
+  // détail heures/minutes qui descend en direct.
+  const timeLabel =
+    daysLeft >= 1 ? `${daysLeft} j ${hoursLeft} h` : `${hoursLeft}h${String(minutesLeft).padStart(2, "0")}`;
   const messagesLeft = trialMessagesRemaining(trialMessagesUsed);
   const urgent = msLeft < 2 * 60 * 60 * 1000; // moins de 2h restantes
 
@@ -46,7 +51,7 @@ export function TrialBanner({ trialStartedAt, trialMessagesUsed }: Props) {
     >
       <span style={{ color: "var(--muted)" }}>
         Essai gratuit — <strong style={{ color: urgent ? "var(--danger)" : "var(--text)" }}>
-          {hoursLeft}h{String(minutesLeft).padStart(2, "0")}
+          {timeLabel}
         </strong>{" "}
         restantes, <strong style={{ color: "var(--text)" }}>{messagesLeft}</strong>/{TRIAL_MESSAGE_LIMIT} message
         {messagesLeft > 1 ? "s" : ""} IA restant{messagesLeft > 1 ? "s" : ""}
