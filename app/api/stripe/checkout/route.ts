@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireUser } from "@/lib/auth";
-import { stripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+import { stripe, getPriceId } from "@/lib/stripe";
 import { db } from "@/lib/db";
- 
+
 const BodySchema = z.object({
   plan: z.enum(["STARTER", "PRO", "STUDIO"]),
-  // Optionnel : un utilisateur qui s'inscrit directement (sans passer par 
+  // Facturation mensuelle (par défaut, comportement historique) ou annuelle
+  // (un seul paiement par an, voir PLAN_PRICES dans lib/plan-limits.ts).
+  interval: z.enum(["monthly", "yearly"]).default("monthly"),
+  // Optionnel : un utilisateur qui s'inscrit directement (sans passer par
   // l'analyse gratuite de l'accueil) doit pouvoir payer quand même, sans
   // idée en attente — il en créera une depuis /dashboard/new après paiement.
   pendingIdea: z 
@@ -32,14 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  const { plan, pendingIdea } = parsed.data;
-  const priceId = PLAN_PRICE_IDS[plan];
+  const { plan, pendingIdea, interval } = parsed.data;
+  const priceId = getPriceId(plan, interval);
 
   // Filet de sécurité : si le Price ID Stripe n'est pas configuré pour ce
   // forfait (variable d'env manquante ou vide), on le dit clairement au lieu
   // de laisser Stripe planter avec une erreur générique plus loin.
   if (!priceId) {
-    console.error(`[stripe/checkout] Price ID manquant pour le forfait ${plan} — vérifie les variables d'env Vercel.`);
+    console.error(`[stripe/checkout] Price ID manquant pour le forfait ${plan} (${interval}) — vérifie les variables d'env Vercel.`);
     return NextResponse.json(
       { error: "Ce forfait n'est pas encore configuré correctement, réessaie dans un instant." },
       { status: 500 }
@@ -102,6 +105,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         userId: user.id,
         plan,
+        interval,
         ...(token ? { pendingCheckoutToken: token } : {}),
         affitor_click_id: clickId,
         affitor_customer_key: user.id,
