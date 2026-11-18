@@ -3,11 +3,20 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, hashPassword } from "@/lib/auth";
 import { trackAffitorSignup } from "@/lib/affitor";
+import {
+  DEVICE_COOKIE,
+  deviceCookieOptions,
+  getClientIp,
+  hashIp,
+  isTrialAllowed,
+  recordTrialClaim,
+  resolveDeviceId,
+} from "@/lib/trial-guard";
 
-const BodySchema = z.object({ 
+const BodySchema = z.object({
   email: z.string().email("Email invalide."),
   password: z.string().min(8, "8 caractères minimum."),
-  // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé 
+  // Optionnel : peut être absent si quelqu'un s'inscrit sans être passé
   // par le tunnel "génère ton idée d'abord" (ex: lien direct vers /signup).
   firstName: z.string().trim().max(30).optional(),
 });
@@ -33,17 +42,39 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await hashPassword(password);
-  // L'essai gratuit de 24h démarre dès l'inscription, avant tout paiement
-  // (voir lib/trial.ts) — pas besoin d'action supplémentaire du client.
+
+  // Anti-abus : un seul essai gratuit par appareil (et plafond par réseau),
+  // voir lib/trial-guard.ts. Si l'essai est refusé, le compte est quand même
+  // créé, mais sans essai (statut "NONE") : la personne choisit un forfait.
+  // Si la vérification elle-même plante (base de données), on laisse passer
+  // plutôt que de bloquer une inscription légitime, et on le note dans les logs.
+  const deviceId = resolveDeviceId(req.cookies.get(DEVICE_COOKIE)?.value);
+  const ipHash = hashIp(getClientIp(req.headers));
+  let trialAllowed = true;
+  try {
+    trialAllowed = await isTrialAllowed(deviceId, ipHash);
+  } catch (err) {
+    console.error("[api/auth/signup] Erreur vérification anti-abus essai :", err);
+  }
+
+  // L'essai gratuit (durée dans lib/trial.ts) démarre dès l'inscription, avant
+  // tout paiement — pas besoin d'action supplémentaire du client.
   const user = await db.user.create({
     data: {
       email,
       passwordHash,
       firstName: firstName || undefined,
-      subscriptionStatus: "TRIAL",
-      trialStartedAt: new Date(),
+      ...(trialAllowed ? { subscriptionStatus: "TRIAL", trialStartedAt: new Date() } : {}),
     },
   });
+
+  if (trialAllowed) {
+    try {
+      await recordTrialClaim(user.id, deviceId, ipHash);
+    } catch (err) {
+      console.error("[api/auth/signup] Erreur enregistrement de l'essai :", err);
+    }
+  }
 
   await createSession(user.id);
 
@@ -55,5 +86,7 @@ export async function POST(req: NextRequest) {
     clickId,
   });
 
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true, trialAvailable: trialAllowed });
+  response.cookies.set(DEVICE_COOKIE, deviceId, deviceCookieOptions());
+  return response;
 }
