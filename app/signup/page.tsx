@@ -4,14 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
- 
+
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [backUrl, setBackUrl] = useState("/"); 
+  const [backUrl, setBackUrl] = useState("/");
 
   useEffect(() => {
     try {
@@ -52,6 +52,14 @@ export default function SignupPage() {
     if (!res.ok) {
       setError(data.error ?? "Une erreur est survenue.");
       setLoading(false);
+      return;
+    }
+
+    // Essai gratuit déjà utilisé sur cet appareil ou ce réseau (voir
+    // lib/trial-guard.ts) : le compte existe mais sans essai, direction les
+    // forfaits avec un message clair.
+    if (data.trialAvailable === false) {
+      router.push("/pricing?trial=used");
       return;
     }
 
