@@ -7,7 +7,7 @@ import { AnimatedGrid } from "@/components/AnimatedGrid";
 const TESTIMONIALS = [
   {
     initials: "CR",
-    name: "Camille R.",  
+    name: "Camille R.",
     plan: "forfait momentum",
     color: "#5DCAA5",
     // Catégorie utilisée pour faire remonter le témoignage le plus pertinent
@@ -76,7 +76,7 @@ export default function WelcomePage() {
     }
   }, []);
 
-  // Démarre le dashboard en essai gratuit 24h (voir lib/trial.ts) : on
+  // Démarre le dashboard en essai gratuit de 7 jours (voir lib/trial.ts) : on
   // récupère le schéma généré avant inscription s'il existe (sessionStorage),
   // on le sauvegarde une bonne fois pour toutes, puis direction le dashboard
   // — plus de détour obligatoire par les forfaits à cette étape.
@@ -238,7 +238,7 @@ export default function WelcomePage() {
         </div>
 
         <button onClick={handleStart} disabled={starting} className="btn-primary" style={{ width: "100%" }}>
-          {starting ? "Un instant..." : "Commencer mon essai gratuit (24h) →"}
+          {starting ? "Un instant..." : "Commencer mon essai gratuit (7 jours) →"}
         </button>
       </div>
     </div>
