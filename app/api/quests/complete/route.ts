@@ -3,17 +3,25 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ensureNextBatchForQuestTrack } from "@/lib/quests";
+import { hasDashboardAccess } from "@/lib/trial";
 
-const BodySchema = z.object({ 
+const BodySchema = z.object({
   questId: z.string(),
 });
- 
+
 export async function POST(req: NextRequest) {
   let user;
   try {
     user = await requireUser();
   } catch {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });
+  }
+
+  // Confirmer une quête peut déclencher la génération (payante) du lot
+  // suivant : on exige donc un accès valide (forfait actif ou essai en cours),
+  // comme le reste du dashboard.
+  if (!hasDashboardAccess(user)) {
+    return NextResponse.json({ error: "Un forfait actif est nécessaire." }, { status: 403 });
   }
 
   const json = await req.json().catch(() => null);
