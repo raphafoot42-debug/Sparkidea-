@@ -4,11 +4,11 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { answerChatMessage, type SchemaResult } from "@/lib/ai/schema-generator";
 import { QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
-import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial"; 
+import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial";
 
-const BodySchema = z.object({ 
+const BodySchema = z.object({
   ideaId: z.string(),
-  // Avant : 500 caractères max, incohérent avec le chat de l'assistant 
+  // Avant : 500 caractères max, incohérent avec le chat de l'assistant
   // personnel (8000). Aligné pour la même raison : un vrai paragraphe ne
   // doit pas être coupé.
   message: z.string().min(1).max(8000),
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   // natifs), il n'est plus garanti par le typage d'être "STARTER"/"PRO"/"STUDIO".
   // toPlanKey() valide explicitement, avec repli sûr sur STARTER si la valeur
   // stockée est inattendue.
-  // Essai gratuit : plafond global de 15 messages sur les 24h, pas de
+  // Essai gratuit : plafond global de messages sur toute la durée de l'essai, pas de
   // logique mensuelle (voir lib/trial.ts) — sinon, quota du forfait payant.
   if (user.subscriptionStatus === "TRIAL") {
     if (trialMessagesRemaining(user.trialMessagesUsed) <= 0) {
