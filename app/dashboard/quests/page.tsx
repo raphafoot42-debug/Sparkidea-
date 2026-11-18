@@ -6,11 +6,12 @@ import { DrawerNav } from "@/components/DrawerNav";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
 import { AllQuestsClient } from "@/components/AllQuestsClient";
 import { GoalOnboarding } from "@/components/GoalOnboarding";
-import { GoalStrip } from "@/components/GoalStrip"; 
-import { QuestChatClient } from "@/components/QuestChatClient"; 
+import { GoalStrip } from "@/components/GoalStrip";
+import { QuestChatClient } from "@/components/QuestChatClient";
 import { ensureQuestBatch } from "@/lib/quests";
 import { computeTechnicalProgress } from "@/lib/progress";
 import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { TRIAL_MESSAGE_LIMIT } from "@/lib/trial";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function QuestsPage({
@@ -74,10 +75,15 @@ export default async function QuestsPage({
   });
 
   const technicalProgress = await computeTechnicalProgress(idea.id);
-  const aiMessageLimit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
-  const aiUsedThisMonth = await db.usageLog.count({
-    where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
-  });
+  // Pendant l'essai, le vrai plafond est celui de l'essai (compteur partagé
+  // User.trialMessagesUsed), pas celui d'un forfait payant.
+  const isTrial = user.subscriptionStatus === "TRIAL";
+  const aiMessageLimit = isTrial ? TRIAL_MESSAGE_LIMIT : QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const aiUsedThisMonth = isTrial
+    ? user.trialMessagesUsed
+    : await db.usageLog.count({
+        where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
+      });
 
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
