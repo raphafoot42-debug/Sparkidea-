@@ -1,48 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatedGrid } from "@/components/AnimatedGrid";
-import { QUEST_CHAT_MESSAGE_LIMITS } from "@/lib/plan-limits";
-
-const PLANS = [
-  {
-    id: "STARTER" as const,
-    name: "Starter",  
-    price: "19€",
-    features: ["1 idée active", "Schéma complet + carte mentale", `${QUEST_CHAT_MESSAGE_LIMITS.STARTER} messages IA / mois`],
-    highlight: false,
-  },
-  {
-    id: "PRO" as const,
-    name: "Pro",
-    price: "49€",
-    features: [
-      "Jusqu'à 5 idées actives",
-      "Schéma complet + carte mentale",
-      "Export PDF",
-      `${QUEST_CHAT_MESSAGE_LIMITS.PRO} messages IA / mois`,
-    ],
-    highlight: true,
-  },
-  {
-    id: "STUDIO" as const,
-    name: "Élite",
-    price: "97€",
-    features: [
-      "Jusqu'à 15 idées actives",
-      "Suivi complet dans le temps + historique",
-      "Export PDF",
-      `${QUEST_CHAT_MESSAGE_LIMITS.STUDIO} messages IA / mois`,
-    ],
-    highlight: false,
-  },
-];
+import { PricingPlans } from "@/components/PricingPlans";
+import type { BillingInterval, PlanKey } from "@/lib/plan-limits";
+import { TRIAL_REFUSED_MESSAGE } from "@/lib/trial-guard-messages";
 
 export default function PricingPage() {
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trialUsed, setTrialUsed] = useState(false);
 
-  async function handleChoose(plan: "STARTER" | "PRO" | "STUDIO") {
+  // Lecture directe de l'URL (pas useSearchParams, qui impose un <Suspense>).
+  useEffect(() => {
+    setTrialUsed(new URLSearchParams(window.location.search).get("trial") === "used");
+  }, []);
+
+  async function handleChoose(plan: PlanKey, interval: BillingInterval) {
     setLoadingPlan(plan);
     setError(null);
 
@@ -58,6 +32,7 @@ export default function PricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
+          interval,
           ...(pending ? { pendingIdea: { rawInput: pending.rawInput, schemaData: pending.schema } } : {}),
         }),
       });
@@ -85,67 +60,35 @@ export default function PricingPage() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px" }}>
       <AnimatedGrid intensity="discrete" />
 
-      <div style={{ position: "relative", zIndex: 2, textAlign: "center", marginBottom: 34 }}>
+      <div style={{ position: "relative", zIndex: 2, textAlign: "center", marginBottom: 26 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6 }}>Choisis ton forfait</h1>
         <div style={{ color: "var(--muted)", fontSize: 13 }}>Ton idée est prête. Passe à l&apos;étape suivante.</div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 2, display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-        {PLANS.map((plan) => (
-          <div
-            key={plan.id}
-            className="panel"
-            style={{
-              width: 260,
-              padding: "26px 24px",
-              position: "relative",
-              borderColor: plan.highlight ? "rgba(34,211,238,0.4)" : undefined,
-              boxShadow: plan.highlight ? "0 0 30px rgba(34,211,238,0.08)" : undefined,
-            }}
-          >
-            {plan.highlight && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -11,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "linear-gradient(90deg, var(--line), var(--line2))",
-                  color: "#05070a",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: "4px 10px",
-                  borderRadius: 20,
-                }}
-              >
-                Le plus populaire
-              </div>
-            )}
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>{plan.name}</div>
-            <div style={{ fontSize: 34, fontWeight: 700 }}>
-              {plan.price} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 400 }}>/ mois</span>
-            </div>
-            <ul style={{ listStyle: "none", margin: "20px 0 24px", display: "flex", flexDirection: "column", gap: 10 }}>
-              {plan.features.map((f) => (
-                <li key={f} style={{ fontSize: 13, color: "#cbd5e1", paddingLeft: 18, position: "relative" }}>
-                  <span style={{ position: "absolute", left: 0, color: "var(--line)" }}>✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => handleChoose(plan.id)}
-              disabled={loadingPlan !== null}
-              className={plan.highlight ? "btn-primary" : "btn-secondary"}
-              style={{ width: "100%" }}
-            >
-              {loadingPlan === plan.id ? "..." : `Choisir ${plan.name}`}
-            </button>
-          </div>
-        ))}
+      {trialUsed && (
+        <div
+          className="panel"
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: 560,
+            padding: "12px 18px",
+            marginBottom: 24,
+            fontSize: 13,
+            lineHeight: 1.55,
+            textAlign: "center",
+            border: "1px solid rgba(244,63,94,0.45)",
+          }}
+        >
+          {TRIAL_REFUSED_MESSAGE}
+        </div>
+      )}
+
+      <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 1000 }}>
+        <PricingPlans mode="buy" onChoose={handleChoose} loadingPlan={loadingPlan} />
       </div>
 
       {error && (
