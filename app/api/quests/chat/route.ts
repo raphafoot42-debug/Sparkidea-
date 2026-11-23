@@ -4,10 +4,11 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { answerProjectChatMessage } from "@/lib/ai/quest-generator";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
-import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
+import { countAiMessagesThisMonth, reserveAiMessage } from "@/lib/usage";
 import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial";
 
-// ideaId remplace questId — décidé avec Raphaël : le chat n'est plus limité 
+// ideaId remplace questId — décidé avec Raphaël : le chat n'est plus limité
 // à une quête sélectionnée, il connaît tout le projet et répond librement.
 // conversationId est optionnel : s'il est absent, une nouvelle conversation
 // est créée automatiquement (premier message d'un chat flambant neuf).
@@ -82,11 +83,9 @@ export async function POST(req: NextRequest) {
   } else {
     const planKey = toPlanKey(user.plan);
     const limit = QUEST_CHAT_MESSAGE_LIMITS[planKey];
-    const startOfMonth = startOfCurrentMonth();
 
-    const usedThisMonth = await db.usageLog.count({
-      where: { userId: user.id, source: "quest", createdAt: { gte: startOfMonth } },
-    });
+    // Compteur unique tous chats confondus (schéma + quêtes), voir lib/usage.ts.
+    const usedThisMonth = await countAiMessagesThisMonth(user.id);
 
     if (usedThisMonth >= limit) {
       return NextResponse.json(
@@ -149,6 +148,29 @@ export async function POST(req: NextRequest) {
     data: { conversationId: conversation.id, role: "user", text: parsed.data.message },
   });
 
+  // Réservation atomique du message AVANT l'appel IA (voir lib/usage.ts) :
+  // empêche de dépasser le quota avec des requêtes envoyées en parallèle.
+  const isTrial = user.subscriptionStatus === "TRIAL";
+  const limit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const reservation = await reserveAiMessage({
+    userId: user.id,
+    isTrial,
+    source: "quest",
+    monthlyLimit: limit,
+    trialLimit: TRIAL_MESSAGE_LIMIT,
+  });
+  if (!reservation.ok) {
+    return NextResponse.json(
+      {
+        error: isTrial
+          ? `Limite de ${TRIAL_MESSAGE_LIMIT} messages de l'essai gratuit atteinte. Passe à un forfait pour continuer.`
+          : `Limite de ${limit} messages atteinte ce mois-ci sur l'aide IA. Tes quêtes restent accessibles, la conversation reprendra le mois prochain.`,
+        limitReached: true,
+      },
+      { status: 429 }
+    );
+  }
+
   try {
     const result = await answerProjectChatMessage(
       schema.projectTitle,
@@ -165,15 +187,10 @@ export async function POST(req: NextRequest) {
     // updatedAt sert à trier la liste des conversations (la plus récemment
     // active en premier, comme sur Claude.ai).
     await db.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
-    await db.usageLog.create({ data: { userId: user.id, source: "quest" } });
-    if (user.subscriptionStatus === "TRIAL") {
-      await db.user.update({
-        where: { id: user.id },
-        data: { trialMessagesUsed: { increment: 1 } },
-      });
-    }
     return NextResponse.json({ reply: result.reply, conversationId: conversation.id, conversationTitle: conversation.title });
   } catch (err) {
+    // L'IA n'a pas répondu : on rend le message réservé au client.
+    await reservation.release();
     console.error("[api/quests/chat] Erreur IA :", err);
     return NextResponse.json({ error: "L'IA n'a pas pu répondre, réessaie.", conversationId: conversation.id }, { status: 500 });
   }

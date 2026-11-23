@@ -5,6 +5,7 @@ import {
   PLAN_CATALOG,
   PLAN_PRICES,
   formatEuro,
+  maxYearlyDiscountPercent,
   yearlyPerMonth,
   yearlySavings,
   type BillingInterval,
@@ -63,7 +64,7 @@ export function PricingPlans({ mode, onChoose, loadingPlan = null }: Props) {
                 background: active ? "linear-gradient(90deg, var(--line), var(--line2))" : "transparent",
               }}
             >
-              {value === "monthly" ? "Mensuel" : "Annuel · 2 mois offerts"}
+              {value === "monthly" ? "Mensuel" : `Annuel · jusqu'à -${maxYearlyDiscountPercent()} %`}
             </button>
           );
         })}

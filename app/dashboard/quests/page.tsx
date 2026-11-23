@@ -10,7 +10,8 @@ import { GoalStrip } from "@/components/GoalStrip";
 import { QuestChatClient } from "@/components/QuestChatClient";
 import { ensureQuestBatch } from "@/lib/quests";
 import { computeTechnicalProgress } from "@/lib/progress";
-import { QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
+import { countAiMessagesThisMonth } from "@/lib/usage";
 import { TRIAL_MESSAGE_LIMIT } from "@/lib/trial";
 import type { SchemaResult } from "@/lib/ai/schema-generator";
 
@@ -81,9 +82,7 @@ export default async function QuestsPage({
   const aiMessageLimit = isTrial ? TRIAL_MESSAGE_LIMIT : QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
   const aiUsedThisMonth = isTrial
     ? user.trialMessagesUsed
-    : await db.usageLog.count({
-        where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
-      });
+    : await countAiMessagesThisMonth(user.id);
 
   return (
     <div style={{ position: "relative", minHeight: "100vh" }}>
@@ -107,6 +106,17 @@ export default async function QuestsPage({
               text: idea.finalGoal,
             }]).map((goal) => ({ id: goal.id, text: goal.text }))}
           />
+        )}
+        {isTrial && !quests.some((q) => q.status === "PENDING") && (
+          <div
+            className="panel"
+            style={{ maxWidth: 560, padding: "14px 18px", marginBottom: 16, fontSize: 13, lineHeight: 1.6, textAlign: "center" }}
+          >
+            Tu as terminé toutes les quêtes de l&apos;essai gratuit. Passe à un forfait pour débloquer la suite.{" "}
+            <a href="/pricing" style={{ color: "var(--line)" }}>
+              Voir les forfaits
+            </a>
+          </div>
         )}
         <AllQuestsClient
           projectTitle={schema.projectTitle}

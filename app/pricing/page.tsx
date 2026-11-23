@@ -10,10 +10,19 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [trialUsed, setTrialUsed] = useState(false);
+  const [refundNotice, setRefundNotice] = useState<string | null>(null);
 
   // Lecture directe de l'URL (pas useSearchParams, qui impose un <Suspense>).
   useEffect(() => {
-    setTrialUsed(new URLSearchParams(window.location.search).get("trial") === "used");
+    const params = new URLSearchParams(window.location.search);
+    setTrialUsed(params.get("trial") === "used");
+    const refund = params.get("refund");
+    if (refund === "error") {
+      setRefundNotice("Ton abonnement est résilié, mais le remboursement automatique a rencontré un problème. Contacte-nous : on te rembourse manuellement.");
+    } else if (refund && Number(refund) > 0) {
+      const euros = (Number(refund) / 100).toFixed(2).replace(".", ",");
+      setRefundNotice(`Ton abonnement est résilié. Un remboursement de ${euros} € a été émis : il arrive sur ta carte sous quelques jours.`);
+    }
   }, []);
 
   async function handleChoose(plan: PlanKey, interval: BillingInterval) {
@@ -67,6 +76,24 @@ export default function PricingPage() {
         <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6 }}>Choisis ton forfait</h1>
         <div style={{ color: "var(--muted)", fontSize: 13 }}>Ton idée est prête. Passe à l&apos;étape suivante.</div>
       </div>
+
+      {refundNotice && (
+        <div
+          className="panel"
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: 560,
+            padding: "12px 18px",
+            marginBottom: 24,
+            fontSize: 13,
+            lineHeight: 1.55,
+            textAlign: "center",
+          }}
+        >
+          {refundNotice}
+        </div>
+      )}
 
       {trialUsed && (
         <div

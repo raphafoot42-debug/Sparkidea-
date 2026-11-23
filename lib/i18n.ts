@@ -10,7 +10,7 @@ export type Lang = "fr" | "en" | "ja" | "ru";
 export const settingsDict = {
   fr: {
     title: "Paramètres",
-    appearance: "Apparence", 
+    appearance: "Apparence",
     wallpaper: "Fond d'écran",
     dark: "Noir",
     light: "Blanc",
@@ -38,7 +38,7 @@ export const settingsDict = {
     cancelPlan: "Résilier l'abonnement",
     cancelPlanSub: "Accès bloqué immédiatement jusqu'à nouveau paiement",
     cancelConfirmText:
-      "Confirme la résiliation : tu perdras l'accès à l'IA, à ton schéma et à ton historique jusqu'à ce que tu repayes.",
+      "Confirme la résiliation : tu perdras l'accès à l'IA, à ton schéma et à ton historique jusqu'à ce que tu repayes. Forfait annuel : tu es remboursé du temps non utilisé, moins un mois de forfait.",
     cancel: "Annuler",
     confirm: "Confirmer",
     confirming: "...",
@@ -80,7 +80,7 @@ export const settingsDict = {
     cancelPlan: "Cancel subscription",
     cancelPlanSub: "Access blocked immediately until you pay again",
     cancelConfirmText:
-      "Confirm cancellation: you'll lose access to the AI, your schema and your history until you pay again.",
+      "Confirm cancellation: you'll lose access to the AI, your schema and your history until you pay again. Annual plan: you're refunded for the unused time, minus one month of the plan.",
     cancel: "Cancel",
     confirm: "Confirm",
     confirming: "...",

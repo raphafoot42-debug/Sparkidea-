@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { answerChatMessage, type SchemaResult } from "@/lib/ai/schema-generator";
 import { QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
+import { countAiMessagesThisMonth, reserveAiMessage } from "@/lib/usage";
 import { hasDashboardAccess, TRIAL_MESSAGE_LIMIT, trialMessagesRemaining } from "@/lib/trial";
 
 const BodySchema = z.object({
@@ -83,13 +84,9 @@ export async function POST(req: NextRequest) {
   } else {
     const planKey = toPlanKey(user.plan);
     const limit = QUEST_CHAT_MESSAGE_LIMITS[planKey];
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
 
-    const usedThisMonth = await db.usageLog.count({
-      where: { userId: user.id, source: "schema", createdAt: { gte: startOfMonth } },
-    });
+    // Compteur unique tous chats confondus (schéma + quêtes), voir lib/usage.ts.
+    const usedThisMonth = await countAiMessagesThisMonth(user.id);
 
     if (usedThisMonth >= limit) {
       // Bloque uniquement le chat — l'utilisateur garde sa page avec le
@@ -106,6 +103,29 @@ export async function POST(req: NextRequest) {
 
   const currentSchema = JSON.parse(idea.schemaData) as SchemaResult;
 
+  // Réservation atomique du message AVANT l'appel IA (voir lib/usage.ts) :
+  // empêche de dépasser le quota avec des requêtes envoyées en parallèle.
+  const isTrial = user.subscriptionStatus === "TRIAL";
+  const monthlyLimit = QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
+  const reservation = await reserveAiMessage({
+    userId: user.id,
+    isTrial,
+    source: "schema",
+    monthlyLimit,
+    trialLimit: TRIAL_MESSAGE_LIMIT,
+  });
+  if (!reservation.ok) {
+    return NextResponse.json(
+      {
+        error: isTrial
+          ? `Limite de ${TRIAL_MESSAGE_LIMIT} messages de l'essai gratuit atteinte. Passe à un forfait pour continuer.`
+          : `Limite de ${monthlyLimit} messages atteinte ce mois-ci. Ton schéma reste accessible, la conversation reprendra le mois prochain.`,
+        limitReached: true,
+      },
+      { status: 429 }
+    );
+  }
+
   try {
     const latestCheckIn = await db.checkIn.findFirst({
       where: { ideaId: idea.id },
@@ -114,14 +134,6 @@ export async function POST(req: NextRequest) {
     });
     const result = await answerChatMessage(currentSchema, message, history ?? [], image, latestCheckIn);
 
-    await db.usageLog.create({ data: { userId: user.id, source: "schema" } });
-    if (user.subscriptionStatus === "TRIAL") {
-      await db.user.update({
-        where: { id: user.id },
-        data: { trialMessagesUsed: { increment: 1 } },
-      });
-    }
-
     // Changement de comportement volontaire : avant, un "newNode" détecté
     // par l'IA était appliqué directement au schéma, sans que l'utilisateur
     // ait rien validé. Décidé avec Raphaël : l'IA doit maintenant PROPOSER
@@ -129,6 +141,8 @@ export async function POST(req: NextRequest) {
     // côté utilisateur, via /api/chat/apply, seulement s'il clique "Appliquer".
     return NextResponse.json({ reply: result.reply, proposedNode: result.newNode ?? null });
   } catch (err) {
+    // L'IA n'a pas répondu : on rend le message réservé au client.
+    await reservation.release();
     console.error("Erreur chat IA :", err);
     return NextResponse.json({ error: "L'IA n'a pas pu répondre, réessaie." }, { status: 500 });
   }

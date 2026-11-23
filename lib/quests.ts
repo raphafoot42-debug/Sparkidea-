@@ -1,9 +1,10 @@
 import { db } from "./db";
 import { generateQuestBatch, type Track } from "./ai/quest-generator";
-import type { SchemaResult } from "./ai/schema-generator"; 
+import type { SchemaResult } from "./ai/schema-generator";
+import { TRIAL_MAX_QUESTS_PER_TRACK } from "./trial";
 
 const TRACKS: Track[] = ["marketing", "technique"];
- 
+
 // Garantit qu'il existe au moins une quête PENDING pour CHAQUE piste
 // (marketing ET technique) de cette idée — génère un nouveau lot pour la
 // piste concernée si besoin. Appelé au chargement des pages dashboard/quêtes.
@@ -35,6 +36,20 @@ async function ensureTrackBatch(ideaId: string, schema: SchemaResult, track: Tra
     where: { ideaId, track, status: "PENDING" },
   });
   if (pending.length > 0) return;
+
+  // Plafond de l'essai gratuit : au-delà de TRIAL_MAX_QUESTS_PER_TRACK quêtes
+  // déjà générées sur cette piste, on ne lance plus de génération payante.
+  // L'utilisateur voit alors le message l'invitant à choisir un forfait
+  // (voir app/dashboard/quests/page.tsx). Les forfaits payants ne sont pas
+  // concernés.
+  const owner = await db.idea.findUnique({
+    where: { id: ideaId },
+    select: { user: { select: { subscriptionStatus: true } } },
+  });
+  if (owner?.user?.subscriptionStatus === "TRIAL") {
+    const generatedOnTrack = await db.quest.count({ where: { ideaId, track } });
+    if (generatedOnTrack >= TRIAL_MAX_QUESTS_PER_TRACK) return;
+  }
 
   // Deuxième filet de sécurité, indépendant du reste : quoi qu'il arrive
   // (préchargement de lien non corrigé, onglet dupliqué, futur bug qu'on

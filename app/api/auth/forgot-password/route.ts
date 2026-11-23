@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createPasswordResetToken } from "@/lib/auth";
 import { sendEmail } from "@/lib/email/send";
- 
+
 const BodySchema = z.object({ email: z.string().email("Email invalide.") });
 
 export async function POST(req: NextRequest) {
@@ -27,7 +27,12 @@ export async function POST(req: NextRequest) {
   if (!user) return genericResponse;
 
   const token = await createPasswordResetToken(user.id);
-  const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password?token=${token}`;
+  // Le reste de l'application lit NEXT_PUBLIC_BASE_URL ; ici c'était
+  // NEXT_PUBLIC_SITE_URL, une variable différente. Si une seule des deux est
+  // définie sur Vercel, le lien de l'email devenait "undefined/reset-password".
+  // On accepte maintenant les deux (BASE_URL en priorité).
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  const resetUrl = `${siteUrl}/reset-password?token=${token}`;
 
   try {
     await sendEmail({

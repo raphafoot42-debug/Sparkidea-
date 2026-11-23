@@ -8,9 +8,9 @@ type Props = {
   blocked: boolean;
   subscriptionStatus: string;
   email: string;
-  theme: "dark" | "light"; 
+  theme: "dark" | "light";
   language: "fr" | "en" | "ja" | "ru";
-}; 
+};
 
 const LANGUAGES: { value: "fr" | "en" | "ja" | "ru"; label: string }[] = [
   { value: "fr", label: "Français" },
@@ -103,7 +103,11 @@ export function SettingsClient({ blocked, subscriptionStatus, email, theme, lang
     const res = await fetch("/api/stripe/cancel", { method: "POST" });
     setCancelLoading(false);
     if (res.ok) {
-      router.push("/pricing");
+      // Affiche sur /pricing le résultat du remboursement (forfait annuel).
+      const data = await res.json().catch(() => ({}));
+      if (data.refundFailed) router.push("/pricing?refund=error");
+      else if (data.refundedCents > 0) router.push(`/pricing?refund=${data.refundedCents}`);
+      else router.push("/pricing");
     }
   }
 

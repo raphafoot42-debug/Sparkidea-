@@ -14,9 +14,10 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { ShareButton } from "@/components/ShareButton";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
 import { QuestChatClient } from "@/components/QuestChatClient";
-import { canExportPdf, QUEST_CHAT_MESSAGE_LIMITS, startOfCurrentMonth, toPlanKey } from "@/lib/plan-limits";
+import { canExportPdf, QUEST_CHAT_MESSAGE_LIMITS, toPlanKey } from "@/lib/plan-limits";
+import { countAiMessagesThisMonth } from "@/lib/usage";
 import { TRIAL_MESSAGE_LIMIT } from "@/lib/trial";
-import type { SchemaResult } from "@/lib/ai/schema-generator"; 
+import type { SchemaResult } from "@/lib/ai/schema-generator";
 
 export default async function DashboardPage({
   searchParams,
@@ -42,9 +43,7 @@ export default async function DashboardPage({
   const aiMessageLimit = isTrial ? TRIAL_MESSAGE_LIMIT : QUEST_CHAT_MESSAGE_LIMITS[toPlanKey(user.plan)];
   const aiUsedThisMonth = isTrial
     ? user.trialMessagesUsed
-    : await db.usageLog.count({
-        where: { userId: user.id, source: "quest", createdAt: { gte: startOfCurrentMonth() } },
-      });
+    : await countAiMessagesThisMonth(user.id);
 
   if (allIdeas.length === 0) {
     return (

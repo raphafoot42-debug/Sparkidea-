@@ -619,11 +619,13 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Exemple de résultat — aperçu ILLUSTRATIF d'un plan généré (idée
-          fictive), pour montrer ce que le visiteur obtiendra. Données
-          statiques, aucun appel IA : zéro coût, et clairement étiqueté
-          comme exemple pour ne jamais passer pour le résultat d'un vrai
-          client. */}
+      {/* Ce que Spark Idea fait pour toi — remplace l'ancien "exemple de
+          résultat" (idée fictive qui ne ressemblait pas vraiment à l'écran
+          réel du produit). Chaque carte décrit une fonction qui EXISTE
+          vraiment dans l'application : carte mentale, analyse en 10 points,
+          quêtes sur 2 pistes, chat IA avec mémoire du projet, objectifs
+          chiffrés et suivi, PDF et lien de partage. (L'email quotidien n'est volontairement PAS mis en avant tant que l'envoi d'emails n'est pas configuré sur Vercel.) Ne rien
+          ajouter ici qui n'existe pas dans le produit. */}
       <div
         style={{
           position: "relative",
@@ -633,107 +635,81 @@ export default function HomePage() {
         }}
       >
         <div style={{ textAlign: "center", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
-          Exemple de résultat
+          Ce que tu as à l&apos;intérieur
         </div>
         <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 3vw, 26px)", fontWeight: 600, marginBottom: 10 }}>
-          Voilà ce que tu reçois pour une idée
+          Une simple conversation te répond. Spark Idea te fait avancer.
         </h2>
-        <p style={{ textAlign: "center", fontSize: 12.5, color: "var(--muted)", marginBottom: 32 }}>
-          Exemple illustratif, basé sur : « une appli qui aide les artisans à faire leurs devis en 2 minutes ».
+        <p style={{ textAlign: "center", fontSize: 13, color: "var(--muted)", maxWidth: 560, margin: "0 auto 34px", lineHeight: 1.65 }}>
+          Un plan, des actions chaque jour, une IA qui connaît ton projet et un suivi de tes vrais résultats : tout est au même endroit.
         </p>
 
-        <div className="panel" style={{ maxWidth: 860, margin: "0 auto", padding: 26, borderRadius: 18 }}>
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center", marginBottom: 24 }}>
-            <div
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: "50%",
-                border: "2px solid var(--line)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1 }}>7,2</div>
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>/ 10</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 4 }}>DevisRapide</div>
-              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55 }}>
-                Un besoin clair et fréquent, une cible facile à atteindre. Le point à travailler : te démarquer d&apos;une
-                concurrence déjà installée.
+        <div
+          style={{
+            maxWidth: 980,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {[
+            {
+              tag: "Le plan",
+              title: "Une analyse complète, pas un avis en une phrase",
+              text: "Un score sur 6 critères, un verdict honnête et une analyse stratégique en 10 points : marché, cible, concurrence, monétisation, acquisition, risques et opportunités.",
+            },
+            {
+              tag: "La carte",
+              title: "Ton projet sur une carte mentale interactive",
+              text: "Déplace les éléments, zoome, et repère d'un coup d'œil ce qui est à faire, les risques et les points forts. Quand l'IA te propose un nouvel élément, c'est toi qui décides de l'ajouter ou non.",
+            },
+            {
+              tag: "Chaque jour",
+              title: "Des quêtes sur deux pistes : marketing et technique",
+              text: "Des actions concrètes à faire aujourd'hui, avec de nouvelles quêtes générées à mesure que tu avances. Plus de « par où je commence ? ».",
+            },
+            {
+              tag: "Ton IA",
+              title: "Une IA qui connaît ton projet",
+              text: "Ton score, tes critères et tes quêtes en cours sont dans son contexte. Tes conversations sont gardées, tu peux joindre une capture d'écran et lui parler à la voix.",
+            },
+            {
+              tag: "Les résultats",
+              title: "Un objectif chiffré et un vrai suivi",
+              text: "Fixe une cible (clients, revenu ou audience), note tes résultats et vois ta progression : l'effort compte pour 40 %, les résultats réels pour 60 %. Objectif atteint ? L'IA te propose trois nouveaux paliers.",
+            },
+            {
+              tag: "Pour présenter",
+              title: "Un dossier PDF et un lien de partage",
+              text: "Exporte ton plan en PDF pour le montrer à un associé, une banque ou un partenaire, ou envoie un lien de partage en lecture seule. Tes conversations et ton historique restent enregistrés.",
+            },
+          ].map((f) => (
+            <div key={f.title} className="panel" style={{ padding: "22px 22px 24px", borderRadius: 16 }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: 10.5,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--line)",
+                  border: "1px solid rgba(34,211,238,0.35)",
+                  borderRadius: 20,
+                  padding: "2px 9px",
+                  marginBottom: 12,
+                }}
+              >
+                {f.tag}
               </div>
+              <div style={{ fontSize: 15.5, fontWeight: 600, marginBottom: 8, lineHeight: 1.35 }}>{f.title}</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65 }}>{f.text}</div>
             </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px 28px", marginBottom: 26 }}>
-            {[
-              { label: "Problème résolu", score: 8 },
-              { label: "Cible", score: 8 },
-              { label: "Concurrence", score: 5 },
-              { label: "Différenciation possible", score: 6 },
-              { label: "Complexité de réalisation", score: 7 },
-              { label: "Modèle de revenu", score: 8 },
-            ].map((c) => (
-              <div key={c.label}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}>
-                  <span style={{ color: "var(--muted)" }}>{c.label}</span>
-                  <span>{c.score}/10</span>
-                </div>
-                <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.08)" }}>
-                  <div
-                    style={{
-                      width: `${c.score * 10}%`,
-                      height: "100%",
-                      borderRadius: 3,
-                      background: "linear-gradient(90deg, var(--line), var(--line2))",
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 22 }}>
-            {[
-              { tag: "Force", color: "var(--success)", text: "Les artisans perdent du temps sur les devis : la douleur est concrète et revient chaque semaine." },
-              { tag: "Risque", color: "var(--danger)", text: "Des logiciels de devis existent déjà : sans angle précis (métier, rapidité), tu seras noyé dans la masse." },
-              { tag: "À faire", color: "var(--line)", text: "Interroger 10 artisans d'un même métier pour valider le prix qu'ils accepteraient de payer." },
-            ].map((n) => (
-              <div key={n.tag} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: n.color, marginBottom: 6 }}>
-                  {n.tag}
-                </div>
-                <div style={{ fontSize: 12.5, color: "#cbd5e1", lineHeight: 1.55 }}>{n.text}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 18 }}>
-            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
-              Tes quêtes du jour
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                { track: "Marketing", text: "Contacter 3 artisans dans ton réseau et leur demander comment ils font leurs devis aujourd'hui." },
-                { track: "Technique", text: "Dessiner sur papier l'écran « nouveau devis » en 4 champs maximum." },
-              ].map((q) => (
-                <div
-                  key={q.text}
-                  style={{ display: "flex", gap: 12, alignItems: "flex-start", fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}
-                >
-                  <span style={{ fontSize: 10.5, color: "var(--line)", border: "1px solid rgba(34,211,238,0.35)", borderRadius: 20, padding: "2px 8px", flexShrink: 0, marginTop: 1 }}>
-                    {q.track}
-                  </span>
-                  {q.text}
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
+
+        <p style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginTop: 22 }}>
+          L&apos;export PDF est inclus à partir du forfait Pro.
+        </p>
       </div>
 
       {/* Tarifs — affichage seul, sans bouton (décidé avec Raphaël) : les
@@ -857,7 +833,7 @@ export default function HomePage() {
             },
             {
               q: "Puis-je changer ou arrêter mon abonnement ?",
-              a: "Oui, tu peux résilier depuis les réglages de ton compte, et la résiliation prend effet immédiatement. En mensuel, il n'y a aucun engagement. En annuel, tu paies une fois pour 12 mois, à un tarif plus avantageux.",
+              a: "Oui, tu peux résilier depuis les réglages de ton compte : l'accès s'arrête immédiatement. En mensuel, il n'y a aucun engagement. En annuel, tu paies une fois pour 12 mois à un tarif plus avantageux, et si tu résilies tu es remboursé du temps non utilisé, moins un mois de forfait.",
             },
             {
               q: "Spark Idea me garantit-il le succès ?",
